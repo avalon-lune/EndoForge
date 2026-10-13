@@ -1,0 +1,154 @@
+{
+  "project": "EndoForge",
+  "milestone": "Phase 2 contact and traction baseline",
+  "verified_on": "2026-10-13",
+  "scope": "Recorded local Windows engineering regression. No clinical validation; no independent clean-machine rebuild claim.",
+  "configuration": {
+    "unreal_engine": "5.7.4",
+    "sofa": "26.06.00",
+    "physics_dt_s": 0.03333333333333333,
+    "fem_nodes": 351,
+    "tetrahedra": 1152
+  },
+  "physics": {
+    "passed": true,
+    "checks": {
+      "bilateral_contact_grip": true,
+      "fixed_edge_stationary": true,
+      "force_balance_units": true,
+      "friction_transfers_traction": true,
+      "overload_or_quality_protection": true,
+      "physical_slip_and_release": true,
+      "positive_element_volumes": true,
+      "rcm_radial_and_cone_limits": true,
+      "real_top_contact_deformation": true,
+      "regular_steps_healthy": true,
+      "released_recovers": true,
+      "reset_recovers_protection": true,
+      "sampled_penetration_under_1mm": true,
+      "slip_requires_open_cycle": true,
+      "support_penetration_under_0_1mm": true,
+      "ten_clean_resets": true,
+      "unilateral_top_contact_not_grip": true,
+      "unloaded_rest": true
+    },
+    "metrics": {
+      "fixed_error_m": 1.3877787807814457e-17,
+      "max_floor_penetration_m": 0.0,
+      "max_sampled_penetration_m": 0.0,
+      "min_tet_volume_ratio": 0.29256265393629066,
+      "peak_total_jaw_load_n": 0.7415342810016874,
+      "step_max_ms": 47.9891,
+      "step_p95_ms": 29.532
+    },
+    "quasistatic_balance": {
+      "fixed_reaction_n": [
+        -0.03128679395700139,
+        -0.02635208999295998,
+        -0.0013736268849282183
+      ],
+      "free_node_residual_l2_n": 0.0003468672604927176,
+      "jaw_net_force_n": [
+        0.031217264200653003,
+        0.026310282840217622,
+        0.0012567186252503233
+      ],
+      "jaw_nodal_force_l2_n": 0.15679862885029294,
+      "relative_residual": 0.002212182995706531
+    },
+    "executable_sha256": "19EC3F0012232A6D6EBCB1916557B957434BBC8B1919EFB4D36AF4CE4EE06EEE"
+  },
+  "network": {
+    "passed": true,
+    "checks": {
+      "protocol2": true,
+      "30_hz_fixed_step": true,
+      "preset_reset_atomic_pose": true,
+      "all_received_states_healthy": true,
+      "native_bilateral_grip": true,
+      "frictional_8mm_lift": true,
+      "ignored_packets_do_not_refresh_watchdog": true,
+      "ten_clean_resets": true,
+      "invalid_reset_ids_rejected": true,
+      "malformed_commands_atomic": true,
+      "malformed_json_recovers": true,
+      "roll_shortest_path_and_normalized": true,
+      "jaw_pose_orthonormal": true,
+      "reconnect_resets_session": true,
+      "oversize_packet_disconnects": true
+    },
+    "executable_sha256": "19ec3f0012232a6d6ebcb1916557b957434bbc8b1919efb4d36af4ce4ee06eee"
+  },
+  "packaged_input": {
+    "phase": 2,
+    "report_version": 2,
+    "input_path": "PlayerController InputKey -> regular UpdateInput; closed-loop Ctrl/arrow/W/S key control, no direct test writes to ToolTip",
+    "scope": "Software input, SOFA jaw contact/friction, mesh binding and presentation regression; not clinical validation or full-shaft collision validation",
+    "physics_connected": true,
+    "healthy_without_rejected_states": true,
+    "surface_contact_detected": true,
+    "surface_contact_released": true,
+    "bilateral_grasp_observed": true,
+    "traction_held_at_lift": true,
+    "frictional_slip_observed": true,
+    "opening_confirmed_ungrasped": true,
+    "space_opening_released_held_tissue": true,
+    "q_e_roll_input": true,
+    "preset_1_key": true,
+    "preset_2_key_and_90deg_roll": true,
+    "rcm_travel_limit": true,
+    "r_key_reset": true,
+    "tab_detail_view": true,
+    "jaw_geometry_inside_collision_envelope": true,
+    "render_surface_within_0_1mm": true,
+    "sampled_penetration_under_1mm": true,
+    "positive_contact_load_and_tissue_motion": true,
+    "peak_contact_force_n": 0.783331036567688,
+    "peak_grip_force_n": 0.783331036567688,
+    "max_reported_penetration_mm": 0,
+    "max_slip_distance_mm": 7.71036958694458,
+    "max_tissue_displacement_mm": 10.451318740844727,
+    "max_render_surface_offset_mm": 0.10000000149011612,
+    "longest_continuous_hold_at_lift_s": 0.5000030994415283,
+    "penetration_limit_mm": 1,
+    "unhealthy_state_count": 0,
+    "rejected_state_count": 0,
+    "reset_final_displacement_mm": 1.5515837719455236e-14,
+    "jaw_vertex_count": 3998,
+    "jaw_envelope_excess_mm": 0,
+    "physics_nodes": 351,
+    "render_vertices": 5440,
+    "failures": [],
+    "failure": "",
+    "passed": true
+  },
+  "packaged_runtime": {
+    "passed": true,
+    "game_exit_code": 0,
+    "physics_exe_sha256": "19ec3f0012232a6d6ebcb1916557b957434bbc8b1919efb4d36af4ce4ee06eee",
+    "game_exe_sha256": "20a53b67b970a4d5f0fa2f19677778baf37ba577068a15eba467a98ebb54d865",
+    "duration_s": 37.7732389,
+    "screenshot_count": 10,
+    "telemetry_samples": 275,
+    "telemetry_physics_step_p95_ms": 30.586,
+    "engine_protocol_or_fatal_errors": 0,
+    "physics_errors": 0
+  },
+  "relocation": {
+    "passed": true,
+    "manifest_files_verified": 180,
+    "input_test_passed": true
+  },
+  "screenshots": [
+    "../images/traction.png",
+    "../images/jaw-detail.png"
+  ],
+  "limitations": [
+    "Material and friction parameters are uncalibrated engineering values.",
+    "Contact load is the sum of jaw contact magnitudes, not net tool reaction.",
+    "Sampled zero penetration does not prove globally intersection-free surfaces.",
+    "Automated UE InputKey events do not constitute physical hardware or clinician usability tests.",
+    "Rendering detail does not increase FEM resolution.",
+    "Cutting, suturing, anatomical organs and haptics remain future work."
+  ]
+}

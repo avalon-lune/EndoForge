@@ -1,0 +1,21 @@
+* text=auto
+
+# Unreal binary assets must be hydrated through Git LFS before opening the project.
+*.uasset filter=lfs diff=lfs merge=lfs -text
+*.umap filter=lfs diff=lfs merge=lfs -text
+
+# Keep code/document diffs stable across Windows checkouts.
+*.cpp text eol=lf
+*.h text eol=lf
+*.cs text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.ini text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Small, selected README screenshots are ordinary Git objects.
+*.png binary
+*.jpg binary
+*.jpeg binary

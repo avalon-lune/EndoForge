@@ -1,0 +1,87 @@
+{
+  "captured_date": "2026-10-13",
+  "hash_note": "SHA-256 of the downloaded bytes, recorded locally; hashes are integrity pins, not an independent signature verification.",
+  "dependencies": [
+    {
+      "name": "SOFA Windows SDK",
+      "version": "26.06.00",
+      "source_commit": "7c18e95d5c5f2839079892c69e7d89a313c79603",
+      "url": "https://github.com/sofa-framework/sofa/releases/download/v26.06.00/SOFA_v26.06.00_Win64.zip",
+      "archive": "ThirdParty/SOFA/SOFA_v26.06.00_Win64.zip",
+      "sha256": "B60889416A70E0F18638995BA53F1FADCDB1EEF9C8A9936A1ED31F3523FCA7B5",
+      "extract": "ThirdParty/SOFA/sdk",
+      "marker": "ThirdParty/SOFA/sdk/SOFA_v26.06.00_Win64/include/Sofa.Core/sofa/core/ObjectFactory.h",
+      "license": "LGPL-2.1-or-later for selected libraries; SDK additionally contains unused components under other licenses",
+      "use": "Selected dynamic libraries at runtime; headers and import libraries at build time"
+    },
+    {
+      "name": "SOFA corresponding source",
+      "version": "26.06.00",
+      "url": "https://github.com/sofa-framework/sofa/archive/refs/tags/v26.06.00.zip",
+      "archive": "ThirdParty/SOFA/sofa-v26.06.00-source.zip",
+      "sha256": "0C7C0C506B0F68581571EF27C2B08771BBAE55E908C39B7774B35D85B9591E66",
+      "license": "See source file notices; selected runtime libraries LGPL-2.1-or-later",
+      "use": "Corresponding source archive retained for distribution and inspection"
+    },
+    {
+      "name": "CMake portable",
+      "version": "4.4.4",
+      "url": "https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4-windows-x86_64.zip",
+      "archive": "ThirdParty/physics-tools/cmake.zip",
+      "sha256": "BACE36E94B31C68AB6FA295F26DFA11219E0701CF7C94B0284A7D1CB13DAC536",
+      "extract": "ThirdParty/physics-tools",
+      "marker": "ThirdParty/physics-tools/cmake-4.4.4-windows-x86_64/bin/cmake.exe",
+      "license": "BSD-3-Clause; bundled third-party notices included in distribution",
+      "use": "Build time only"
+    },
+    {
+      "name": "Eigen",
+      "version": "3.4.0",
+      "url": "https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip",
+      "archive": "ThirdParty/physics-tools/eigen-3.4.0.zip",
+      "sha256": "EBA3F3D414D2F8CBA2919C78EC6DAAB08FC71BA2BA4AE502B7E5D4D99FC02CDA",
+      "extract": "ThirdParty/physics-tools",
+      "marker": "ThirdParty/physics-tools/eigen-3.4.0/Eigen/Core",
+      "license": "MPL-2.0 primary; full source contains additional notices",
+      "use": "C++ headers"
+    },
+    {
+      "name": "Boost",
+      "version": "1.87.0",
+      "url": "https://archives.boost.io/release/1.87.0/source/boost_1_87_0.zip",
+      "archive": "ThirdParty/physics-tools/boost_1_87_0.zip",
+      "sha256": "F367A218D27B23B568956BACF56D08D2C1D9647211337136BE8CAC5CB2FF0828",
+      "extract": "ThirdParty/physics-tools",
+      "marker": "ThirdParty/physics-tools/boost_1_87_0/boost/version.hpp",
+      "license": "BSL-1.0",
+      "use": "C++ headers only; no Boost runtime DLL"
+    },
+    {
+      "name": "nlohmann/json",
+      "version": "3.11.3",
+      "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp",
+      "archive": "ThirdParty/physics-tools/nlohmann/json.hpp",
+      "sha256": "9BEA4C8066EF4A1C206B2BE5A36302F8926F7FDC6087AF5D20B417D0CF103EA6",
+      "license": "MIT",
+      "use": "C++ single header, JSON protocol"
+    },
+    {
+      "name": "Tight Inclusion license (bundled SOFA SDK DLL)",
+      "version": "SDK config 1.0.4; SOFA source recipe tag v1.0.6-export-target",
+      "url": "https://raw.githubusercontent.com/sofa-framework/Tight-Inclusion/v1.0.6-export-target/LICENSE",
+      "archive": "ThirdParty/SOFA/TIGHT-INCLUSION-LICENSE.txt",
+      "sha256": "F37ED264B627F3349F00ADAEC2256A138C5454BCDEF2ED52008D20C9C4CC61C6",
+      "license": "MIT",
+      "use": "Required notice for tight_inclusion.dll transitively loaded by Collision.Detection.Intersection; DLL is byte-identical to pinned official SOFA SDK"
+    },
+    {
+      "name": "nlohmann/json license",
+      "version": "3.11.3",
+      "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/LICENSE.MIT",
+      "archive": "ThirdParty/physics-tools/nlohmann/LICENSE.MIT",
+      "sha256": "86B998C792894CCB911A1CB7994F7A9652894E7A094C0B5E45BE2F553F45CF14",
+      "license": "MIT",
+      "use": "Runtime redistribution notice for compiled JSON header"
+    }
+  ]
+}

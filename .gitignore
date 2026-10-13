@@ -1,0 +1,71 @@
+# Downloaded SDKs, tool distributions, local delivery packages and scratch work.
+/ThirdParty/
+/output/
+/tmp/
+/Physics/build/
+/Physics/runtime/
+/Physics/diagnostics/
+/Prototype/Packages/
+
+# Unreal-generated files. Keep Source, Config, Content and authored Build files.
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/Windows/FileOpenOrder/
+
+# IDE and compiler output.
+.vs/
+.idea/
+*.sln
+*.suo
+*.user
+*.VC.db
+*.VC.opendb
+*.obj
+*.o
+*.pch
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.exe
+*.dll
+*.lib
+*.so
+*.dylib
+*.a
+
+# Archives, cooked UE payloads, logs and local training sessions.
+*.zip
+*.7z
+*.rar
+*.msi
+*.pak
+*.ucas
+*.utoc
+*.log
+Logs/
+logs/
+session-*.csv
+phase2-session-*.csv
+
+# Python and other local caches.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.cache/
+node_modules/
+
+# Per-machine assistant state and local credentials are not project source.
+/.codex/
+/.agents/
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+Thumbs.db
+Desktop.ini

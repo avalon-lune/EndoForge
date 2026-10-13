@@ -1,0 +1,41 @@
+LapPhysics phase 2 contact prototype — third-party components
+
+SOFA 26.06.00, commit 7c18e95d5c5f2839079892c69e7d89a313c79603
+Copyright the SOFA team and contributing institutions/authors.
+Selected core/component libraries are dynamically linked under LGPL-2.1-or-later.
+See SOFA-LGPL.txt, SOFA-Authors.txt, SOFA-git-info.txt and runtime-manifest.txt.
+Source: https://github.com/sofa-framework/sofa/tree/v26.06.00
+Corresponding source archive in the development workspace:
+ThirdParty/SOFA/sofa-v26.06.00-source.zip
+Corresponding source archive in the delivered package (relative to package root):
+Source/Dependencies/sofa-v26.06.00-source.zip
+Source SHA-256: 0C7C0C506B0F68581571EF27C2B08771BBAE55E908C39B7774B35D85B9591E66
+When distributing this runtime, also make this source archive and notices available.
+The SOFA DLLs have not been modified. Users can replace or rebuild them.
+
+tinyxml2, delivered with the official SOFA SDK
+Copyright Lee Thomason and contributors; zlib license.
+See TINYXML2.txt. Source: https://github.com/leethomason/tinyxml2
+
+Boost 1.87.0 header-only use; Boost Software License 1.0.
+See BOOST.txt. Source: https://www.boost.org/
+
+Eigen 3.4.0 header use; primarily Mozilla Public License 2.0.
+See EIGEN-MPL2.txt and the retained full source archive for per-file notices.
+Source: https://gitlab.com/libeigen/eigen/-/tree/3.4.0
+
+nlohmann/json 3.11.3; copyright Niels Lohmann and contributors; MIT license.
+See NLOHMANN-JSON-MIT.txt.
+Source: https://github.com/nlohmann/json/tree/v3.11.3
+
+The separately downloaded CMake 4.4.4 and Microsoft compiler are build tools,
+not part of the staged runtime. Microsoft Visual C++ runtime prerequisites are
+governed by their own redistributable terms and supplied through the UE package.
+
+No GPL SofaUE5-Renderer code or proprietary SOFA cutting plugin is included.
+
+Tight Inclusion, bundled by the official SOFA SDK as tight_inclusion.dll.
+Copyright (c) 2020 Bolun Wang, Zachary Ferguson, Teseo Schneider, Xin Jiang, Marco Attene, and Daniele Panozzo. MIT license; see TIGHT-INCLUSION-MIT.txt.
+SOFA v26.06 source build recipe: https://github.com/sofa-framework/Tight-Inclusion/tree/v1.0.6-export-target
+Bundled CMake config reports 1.0.4; the DLL is retained byte-for-byte from the pinned SDK. An exact independently established DLL source commit is not supplied by that config.
+This transitive collision-library dependency does not imply the application uses continuous collision detection; the selected intersection model is LocalMinDistance.

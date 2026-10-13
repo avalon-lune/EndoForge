@@ -1,0 +1,15 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.7",
+  "Category": "Medical Training Research",
+  "Description": "Laparoscopic grasping and traction prototype. UE visualization with SOFA physics.",
+  "Modules": [
+    { "Name": "LapTrainer", "Type": "Runtime", "LoadingPhase": "Default" }
+  ],
+  "Plugins": [
+    { "Name": "ProceduralMeshComponent", "Enabled": true },
+    { "Name": "PythonScriptPlugin", "Enabled": true, "TargetAllowList": ["Editor"] },
+    { "Name": "EditorScriptingUtilities", "Enabled": true, "TargetAllowList": ["Editor"] }
+  ],
+  "TargetPlatforms": [ "Windows" ]
+}
