@@ -132,6 +132,43 @@ FTrainingRenderMesh TrainingGeometry::MakeSerratedJaw(int32 JawSign)
     return M;
 }
 
+FTrainingRenderMesh TrainingGeometry::MakeScissorBlade(int32 BladeSign)
+{
+    FTrainingRenderMesh M;
+    TArray<TArray<FVector>> Rings;
+    constexpr int32 Count = 36;
+    for (int32 I=0; I<=Count; ++I)
+    {
+        const double U=static_cast<double>(I)/Count, X=FMath::Lerp(-0.725,0.725,U);
+        const double Tip=FMath::Clamp((U-.78)/.22,0.0,1.0);
+        const double HY=.125-.09*Tip*Tip, HZ=.070-.028*Tip;
+        // Broad steel spine, narrow polished cutting bevel, and a blunt terminal radius.
+        const double ZOuter=BladeSign*HZ, ZInner=-BladeSign*HZ;
+        TArray<FVector> Ring;
+        Ring.Add(FVector(X,-HY+.006,ZOuter));
+        Ring.Add(FVector(X,HY-.014,ZOuter));
+        Ring.Add(FVector(X,HY,ZOuter-BladeSign*.014));
+        Ring.Add(FVector(X,HY*.34,ZInner+BladeSign*.018));
+        Ring.Add(FVector(X,-HY+.005,ZInner));
+        Ring.Add(FVector(X,-HY,ZInner+BladeSign*.005));
+        Rings.Add(Ring);
+    }
+    for(int32 R=0;R<Count;++R)
+        for(int32 J=0;J<6;++J)
+        {
+            const int32 K=(J+1)%6;
+            FVector N=(Rings[R][J]+Rings[R][K])*.5; N.X=0;
+            Quad(M,Rings[R][J],Rings[R+1][J],Rings[R+1][K],Rings[R][K],N);
+        }
+    for(int32 R:{0,Count})
+        for(int32 J=0;J<6;++J)
+        {
+            const FVector C(R==0 ? -.725:.725,0,0);
+            Quad(M,C,Rings[R][J],Rings[R][(J+1)%6],C,FVector(R==0 ? -1:1,0,0));
+        }
+    Complete(M); return M;
+}
+
 void TrainingGeometry::BuildSurfaceBindings(const TArray<FVector>& RestPositions, const TArray<int32>& Faces,
     int32 Subdivisions, TArray<FTrainingSurfaceSample>& OutSamples, FTrainingRenderMesh& OutMesh)
 {
