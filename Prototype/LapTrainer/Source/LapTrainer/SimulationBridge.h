@@ -15,6 +15,28 @@ struct FLapJawPose
     FVector Normal = FVector::UpVector;
 };
 
+struct FLapToolCommand
+{
+    FVector TipCm = FVector::ZeroVector;
+    bool bClosed = false;
+    float RollDeg = 90.0f;
+};
+
+struct FLapToolState
+{
+    FVector ActualTipCm = FVector::ZeroVector;
+    float RollDeg = 90.0f;
+    float JawOpenFraction = 1.0f;
+    bool bGrasping = false;
+    float ForceNewton = 0;
+    int32 ContactCount = 0;
+    float ContactForceNewton = 0;
+    float PenetrationMm = 0;
+    float SlipDistanceMm = 0;
+    FString GripState = TEXT("open");
+    TArray<FLapJawPose> JawPoses;
+};
+
 /** A local, nonblocking transport. SOFA is the only owner of tissue mechanics. */
 UCLASS()
 class LAPTRAINER_API USimulationBridge : public UObject
@@ -23,6 +45,13 @@ class LAPTRAINER_API USimulationBridge : public UObject
 public:
     void InitializeBridge();
     void TickBridge(float DeltaSeconds, const FVector& ToolTipCm, bool bClosed, bool bReset, float RollDeg = 0.0f);
+    void TickDualBridge(float DeltaSeconds, const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bReset);
+    const FLapToolState* GetToolState(int32 Index) const { return HasToolState() && ToolStates.IsValidIndex(Index) ? &ToolStates[Index] : nullptr; }
+    uint64 GetTopologyRevision() const { return TopologyRevision; }
+    uint64 GetSafetyStopCount() const { return SafetyStopCount; }
+    int32 GetCutCount() const { return CutCount; }
+    int32 GetComponentCount() const { return ComponentCount; }
+    float GetCutLengthCm() const { return CutLengthCm; }
     void ShutdownBridge();
     bool GetSurface(TArray<FVector>& OutVerticesCm, TArray<int32>& OutTriangles) const;
     bool IsConnected() const;
@@ -50,15 +79,24 @@ public:
     uint64 GetFrameNumber() const { return MeshRevision; }
     virtual void BeginDestroy() override;
 private:
+    friend class FPhase3BridgeProtocolTest;
     void TryConnect();
     void Disconnect(const FString& Reason);
     void ReceiveMessages();
     void HandleMessage(const FString& Line);
-    void QueueCommand(const FVector& TipCm, bool bClosed, float RollDeg);
+    void QueueCommand(const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bPermitClosure);
     void RecordTelemetry();
     void FlushTelemetry();
     FSocket* Socket = nullptr;
-    int32 PhysicsPort = 47322;
+    int32 PhysicsPort = 47323;
+    TArray<FLapToolState> ToolStates;
+    TArray<FLapToolCommand> LastCommands;
+    int32 LastActiveTool = 0;
+    uint64 TopologyRevision = 0;
+    uint64 SafetyStopCount = 0;
+    int32 CutCount = 0;
+    int32 ComponentCount = 1;
+    float CutLengthCm = 0;
     TArray<uint8> ReceiveBuffer;
     TArray<uint8> SendBuffer;
     int32 SendOffset = 0;

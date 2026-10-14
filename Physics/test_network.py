@@ -4,7 +4,7 @@ BASE=pathlib.Path(__file__).resolve().parent
 runtime=BASE/'runtime'
 report={'phase':2,'experimental':False,'passed':False,'checks':{},'tested_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'executable_sha256':hashlib.sha256((runtime/'LapPhysics.exe').read_bytes()).hexdigest()}
 log=(runtime/'phase2-network-test.log').open('w',encoding='utf8')
-proc=subprocess.Popen([str(runtime/'LapPhysics.exe')],cwd=runtime,stdout=log,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
+proc=subprocess.Popen([str(runtime/'LapPhysics.exe'),'--phase2'],cwd=runtime,stdout=log,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
 sock=None;buf=b'';latest=None;seq=0;rid=0
 try:
     for _ in range(100):

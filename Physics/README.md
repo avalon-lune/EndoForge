@@ -1,3 +1,41 @@
+# Phase 3: physical cutting of a thin tetrahedral layer
+
+The default `LapPhysics.exe` is the Phase 3 service on localhost **47323**, protocol **3**. `--phase2` retains the Phase 2 service on 47322. `--self-test` retains the Phase 2 numerical suite; `--self-test-phase3 <report.json>` runs Phase 3. `RunPhase3Regression.ps1` runs numerical and real-TCP acceptance. The TCP suite owns a hidden process on 47324.
+
+## Mechanical model and limits
+
+- SOFA `TetrahedronFEMForceField`, corotational `large` mode, Young modulus **25,000 Pa**, Poisson ratio **0.35**. These engineering values are **not measured tissue calibration**.
+- Actual **120 x 80 x 1.5 mm** tetrahedral training layer. A 25 x 17 center grid is extruded to **850 physical nodes**, **2,304 tetrahedra** and **1,696 initial boundary triangles**. Mesh spacing is 5 mm; diagonal edges are about 7.1 mm. Each triangular prism uses three conforming tetrahedra with consistent vertical-face diagonals.
+- Density 1,000 kg/m3, total mass **0.0144 kg**. Per-node mass is lumped from actual tetrahedron rest volumes. The top, bottom, perimeter and exposed cut walls are physical collision/render surfaces derived from the tetrahedral boundary.
+- Implicit Euler, Rayleigh stiffness damping 0.015 and mass damping 8; each command/output update advances **1/30 s** of simulated time. A candidate first uses one step, then retries from the prior accepted body/tool state using two or four substeps if required. Each substep is audited before acceptance. Actual substep sizes range from 1/30 to 1/120 s; this is not a guaranteed achieved refresh rate. Measured wall-clock timing is in each acceptance report.
+- Rear edge fixed. Gravity is zero for this isolated manipulation exercise: fragments respond to contact and retained velocity, but do not fall ballistically. The tray supplies support contact. Tissue self-collision, tool-tool and shaft collisions are not modeled.
+- Native frictional Lagrangian contact uses coefficient 0.8, a 0.45 mm contact skin, compliance regularization 0.01 and triangle/point collision primitives. The solver uses up to 80 iterations at tolerance 1e-6. Each physical jaw is a two-segment triangulated oriented box, 14.5 x 2.5 x 1.4 mm.
+- The grasper requires opposing inner-jaw contact and load above 0.03 N to latch. It transfers traction through SOFA friction; adaptive closure advances 0.6 degrees per update when load falls below 0.03 N. Sustained contact loss releases the grip after nine update frames. Slip and release are possible during cutting.
+- Reported force is the sum of the tool contact-impulse magnitudes divided by the **actual substep duration**. It is not net tool reaction or a calibrated haptic force.
+- The scissors is a bounded closing-wedge model with an **8 degree minimum half-angle**. The actual angle is sent to UE and rendered. It does not model fully crossing surgical blades or continuous fracture energy.
+
+## Physical cutting
+
+Only the active scissors can cut during a closing stroke. Actual native inner-blade contacts on the deformed boundary seed candidate material edges within a **3.6 mm snapping distance**, a finite **12 mm blade segment** and a **7 mm closing-wedge envelope**. At **18 degrees half-angle**, the contacted graph resolves to one nonbranching shortest mesh-edge incision path. Opening, input loss or deactivation clears pending contacts; reopening beyond 28 degrees rearms another stroke. Open/inactive/noncontacting scissors do not cut.
+
+A cut separates incident material-triangle fans and duplicates both thickness layers along that incision. The tetrahedral FEM, boundary collision surfaces and render indices are rebuilt together. The operation removes mechanical connectivity; no tetrahedra are deleted or visually hidden to imitate cutting. Positions, velocities, material rest coordinates and volume-weighted mass survive the split. New physical sidewalls expose the full 1.5 mm thickness. Grasper slip tracking uses immutable top material-face IDs. The old SOFA graph stays alive until the replacement graph initializes, allowing construction-failure rollback.
+
+This is **5 mm edge-aligned, full-thickness layer cutting**. It is not arbitrary submillimeter cutting, free-form volumetric organ cutting or clinically calibrated fracture. `cut_count` counts cutting events; `cut_edge_count` counts distinct severed mesh edges. A single short interior cut can remain constrained at its two crack tips until adjacent edges are cut. Full fragment separation requires a completed separating path.
+
+State frames contain both tools, vertices, boundary triangles, topology revision, cut counters, component count and health. UE must apply topology and positions atomically. Switching selection freezes the inactive pose; inactive closure commands are ignored, while explicit opening remains available. The watchdog requests both tools open after 0.5 s without a valid command. Invalid candidate volume/contact states are rolled back; exhausted retries are surfaced as protection events. A terminal geometry failure freezes the last accepted tissue and jaw poses and requires Reset. The open-command flags clear, but jaws do not continue moving while the solver is frozen. `safety_stops` is a monotonic lifetime counter retained through reset. `adaptive_retries` counts numerical retry attempts; `last_substeps` reports the latest attempted or accepted subdivision. Reset restores intact topology and safe outside tool poses; requested preset targets are then approached at the bounded tool speed, without teleporting into tissue.
+
+Retry restoration covers tissue position, velocity and free states, jaw pose and free states, and simulation time. The SOFA constraint matrix is rebuilt on every animation step. In this SDK, `UnilateralLagrangianConstraint::getConstraintResolution` constructs the friction resolution with a null previous-forces container, so rejected friction impulses are not used to warm-start a retry. Topology is committed only after an accepted step.
+
+## Tested interaction and provenance
+
+The initial grasper approach is **(-22, -34, 4.5) mm**, roll 90 degrees; close to obtain bilateral contact, then lift 4 mm to z=8.5 mm. Scissors targets must follow the current deformed upper surface. The scripted test first approaches the upper vertex nearest (40, -35) mm, with its tip 2 mm below that current upper point. Between subsequent bites it withdraws 12 mm, translates above the sheet, then approaches again. This is a tested engineering trajectory, not clinical technique guidance.
+
+The numerical suite checks native grasp/traction, sustained holding during a cut, cut/hold/open stability, conserved mass and material elements, idempotence, reset, two RCM workspaces and elastic decoupling of a fully separated free strip. The real-TCP suite drives the public command protocol, repeats cutting on the deformed layer, checks inactive/noncontact guards, preserves all received health history and exercises the watchdog. Reports are bound to executable SHA-256 by `RunPhase3Regression.ps1`. `build-info.json` is marked verified only after both suites pass. UE and packaged acceptance remain separate project-script checks.
+
+---
+# Historical Phase 2 implementation reference
+
+The sections below describe the preserved Phase 2 volumetric-pad mode. Their geometry, ports, material law and tests are not the Phase 3 membrane specification.
 # LapPhysics — phase 2 SOFA contact service
 
 Native C++ application using the unmodified official SOFA 26.06.00 Win64 libraries. All tissue vertices are evolved by SOFA FEM; UE displays returned geometry and jaw poses. The phase 1 package is retained separately. No Python, SofaPython3, Qt, Blender, proprietary bridge, or cloud service is needed at runtime.

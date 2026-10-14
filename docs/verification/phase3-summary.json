@@ -1,0 +1,167 @@
+{
+  "phase": 3,
+  "physics_exe_sha256": "1acaacf545afc36a9caff8bcd7babfe9d6d83b31eee2fabda7210103b95e80e7",
+  "game_exe_sha256": "15962328d6da04079c7bca17ce8d9f8103e2a514786b0efbf3d7776aa6e393b7",
+  "native_checks": {
+    "air_closure_does_not_cut": true,
+    "bilateral_grip": true,
+    "blade_closure_changes_topology": true,
+    "both_rcm_insertion_limits": true,
+    "cut_preserves_mass": true,
+    "cut_preserves_material_elements": true,
+    "cut_state_healthy": true,
+    "dual_tool_hold_during_cut": true,
+    "every_regular_state_finite": true,
+    "every_regular_step_healthy_without_protection": true,
+    "full_cut_separates_components": true,
+    "grip_transfers_traction": true,
+    "inactive_scissors_cannot_cut": true,
+    "one_cut_per_closure": true,
+    "repeated_same_edge_cut_idempotent": true,
+    "reset_restores_intact_topology": true,
+    "rest_equilibrium": true,
+    "separated_fragment_has_no_cross_cut_elastic_load": true,
+    "watchdog_opens_both_tools": true
+  },
+  "network_checks": {
+    "protocol3_and_two_tools": true,
+    "bilateral_friction_grip": true,
+    "frictional_traction": true,
+    "contact_closure_splits_mesh": true,
+    "other_tool_remains_holding_during_cut": true,
+    "one_cut_event_per_closure": true,
+    "cut_fragment_release_stable": true,
+    "repeated_cutting_events": true,
+    "disconnected_component_created_by_tool": true,
+    "continued_cutting_healthy": true,
+    "inactive_scissors_no_cut": true,
+    "grasp_release_after_cut": true,
+    "reset_restores_mesh_and_counters": true,
+    "hover_has_no_native_contact_before_close": true,
+    "near_miss_no_native_blade_contact_no_cut": true,
+    "invalid_command_atomic_rejection": true,
+    "invalid_packets_do_not_refresh_watchdog": true,
+    "all_received_states_healthy": true,
+    "no_terminal_numerical_protection": true
+  },
+  "input_checks": {
+    "physics_connected": true,
+    "healthy_without_rejected_states": true,
+    "regular_exercise_without_safety_stops": true,
+    "contact_grasp": true,
+    "traction_before_cut": true,
+    "switch_keeps_latched_grasper": true,
+    "independent_tool_motion": true,
+    "closure_changes_physical_topology": true,
+    "repeated_closures_continue_cut": true,
+    "separated_components_observed": true,
+    "topology_render_binding_updated": true,
+    "render_matches_physical_surface": true,
+    "both_instrument_models_inside_contact_envelopes": true,
+    "opening_does_not_cut": true,
+    "grasper_selection_does_not_cut": true,
+    "parked_grasper_releases": true,
+    "reset_restores_intact_membrane": true
+  },
+  "physics_model": {
+    "boundary_triangle_count": 1696,
+    "bulk_young_pa": 25000,
+    "center_grid_nodes": 425,
+    "contact_compliance_regularization": 0.01,
+    "cut_commit_half_angle_deg": 18,
+    "faces": 768,
+    "mass_kg": 0.014399999999999845,
+    "output_dt_s": 0.03333333333333333,
+    "physical_node_count": 850,
+    "physics_substep_s": 0.03333333333333333,
+    "scissor_min_half_angle_deg": 8,
+    "spacing_m": 0.005,
+    "tet_count": 2304,
+    "thickness_m": 0.0015,
+    "physics_substep_s_is_nominal": true,
+    "physics_substep_min_s": 0.008333333333333333,
+    "physics_substep_max_s": 0.03333333333333333,
+    "adaptive_substep_counts": [
+      1,
+      2,
+      4
+    ]
+  },
+  "physics_metrics": {
+    "samples": 424,
+    "step_max_ms": 78.1283,
+    "step_p95_ms": 64.3161
+  },
+  "input_metrics": {
+    "max_displacement_mm": 35.49766159057617,
+    "max_render_offset_mm": 0,
+    "peak_grasper_load_n": 0.3240506649017334,
+    "instrument_blade_vertices": 5822,
+    "blade_envelope_excess_mm": 0,
+    "max_cut_count": 2,
+    "max_component_count": 2,
+    "max_topology_revision": 6,
+    "unhealthy_state_count": 0,
+    "rejected_state_count": 0,
+    "safety_stop_count": 0,
+    "elapsed_s": 24.44116973876953
+  },
+  "telemetry_samples": 396,
+  "telemetry_physics_step_p95_ms": 48.8379,
+  "screenshot_dimensions": {
+    "phase3_01_ready.png": [
+      1600,
+      900
+    ],
+    "phase3_02_grasp.png": [
+      1600,
+      900
+    ],
+    "phase3_03_traction.png": [
+      1600,
+      900
+    ],
+    "phase3_04_cut.png": [
+      1600,
+      900
+    ],
+    "phase3_05_separation.png": [
+      1600,
+      900
+    ],
+    "phase3_06_release.png": [
+      1600,
+      900
+    ],
+    "phase3_07_reset.png": [
+      1600,
+      900
+    ]
+  },
+  "limitations": [
+    "Training membrane, not calibrated biological tissue or validated clinical training.",
+    "Automated UE PlayerController input is not physical mouse/keyboard or clinician usability testing.",
+    "Local Windows machine performance only; no hard real-time or haptic guarantee.",
+    "See Source/docs/PHASE3.md for the exact cutting discretization, contact model and exclusions."
+  ],
+  "passed": true,
+  "tested_at_utc": "2026-10-13T20:32:28.7853660Z",
+  "platform": "Windows x64; UE 5.7.4; SOFA 26.06.00",
+  "hardware": "AMD Ryzen 7 9700X, NVIDIA GeForce RTX 5080, 48 GB RAM",
+  "archive": {
+    "filename": "EndoForge_Phase3_Win64.zip",
+    "bytes": 405348956,
+    "sha256": "adaa8c7ef288c4a8adfb46740aacf58226d6c686716cd96f1472b7e6d4673df7",
+    "manifest_files_verified": 197,
+    "relocation_passed": true
+  },
+  "relocated_run": {
+    "input_checks_passed": 17,
+    "telemetry_samples": 386,
+    "physics_step_p95_ms": 55.0066,
+    "engine_errors": 0,
+    "physics_errors": 0,
+    "safety_stops": 0
+  },
+  "preserved_previous_phase_files": 352
+}

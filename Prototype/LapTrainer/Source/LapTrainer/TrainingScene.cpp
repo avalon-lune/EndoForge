@@ -68,58 +68,36 @@ ATrainingScene::ATrainingScene()
 void ATrainingScene::BeginPlay()
 {
     Super::BeginPlay();
-    bVisualPreview = FParse::Param(FCommandLine::Get(), TEXT("LapVisualPreview"));
-    TissueMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Tissue.M_Tissue"));
-    MetalMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Metal.M_Metal"));
-    DarkMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Dark.M_Dark"));
-    TableMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Table.M_Table"));
-    AccentMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Accent.M_Accent"));
-    InsulationMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Insulation.M_Insulation"));
-    TrayMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Tray.M_Tray"));
-    PadBackingMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_PadBacking.M_PadBacking"));
-    if (!TissueMaterial) TissueMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
-    if (!MetalMaterial) MetalMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
-    if (!DarkMaterial) DarkMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
-    if (!TableMaterial) TableMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
-    if (!AccentMaterial) AccentMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
-    if (!InsulationMaterial) InsulationMaterial = DarkMaterial;
-    if (!TrayMaterial) TrayMaterial = MetalMaterial;
-    if (!PadBackingMaterial) PadBackingMaterial = TableMaterial;
-    TissueMesh->SetMaterial(0, TissueMaterial);
-    CreateEnvironment();
-    CreateInstrument();
-    UpdateCamera();
-    if (!bVisualPreview)
+    bVisualPreview=FParse::Param(FCommandLine::Get(),TEXT("LapVisualPreview"));
+    auto Material=[&](const TCHAR* Name) { return LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Materials/%s.%s"),Name,Name)); };
+    TissueMaterial=Material(TEXT("M_Tissue")); MetalMaterial=Material(TEXT("M_Metal"));
+    DarkMaterial=Material(TEXT("M_Dark")); TableMaterial=Material(TEXT("M_Table"));
+    AccentMaterial=Material(TEXT("M_Accent")); InsulationMaterial=Material(TEXT("M_Insulation"));
+    TrayMaterial=Material(TEXT("M_Tray")); PadBackingMaterial=Material(TEXT("M_PadBacking"));
+    if(!TissueMaterial) TissueMaterial=UMaterial::GetDefaultMaterial(MD_Surface);
+    if(!MetalMaterial) MetalMaterial=UMaterial::GetDefaultMaterial(MD_Surface);
+    if(!DarkMaterial) DarkMaterial=UMaterial::GetDefaultMaterial(MD_Surface);
+    if(!TableMaterial) TableMaterial=UMaterial::GetDefaultMaterial(MD_Surface);
+    if(!AccentMaterial) AccentMaterial=UMaterial::GetDefaultMaterial(MD_Surface);
+    if(!InsulationMaterial) InsulationMaterial=DarkMaterial;
+    if(!TrayMaterial) TrayMaterial=MetalMaterial;
+    if(!PadBackingMaterial) PadBackingMaterial=TableMaterial;
+    TissueMesh->SetMaterial(0,TissueMaterial);
+    CreateEnvironment(); CreateInstrument(); UpdateCamera();
+    if(!bVisualPreview) { Bridge=NewObject<USimulationBridge>(this); Bridge->InitializeBridge(); }
+    bPhase3Test=FParse::Param(FCommandLine::Get(),TEXT("LapPhase3Test")) && !bVisualPreview;
+    bAutoExit=FParse::Param(FCommandLine::Get(),TEXT("LapAutoExit"));
+    if(bPhase3Test)
     {
-        Bridge = NewObject<USimulationBridge>(this);
-        Bridge->InitializeBridge();
+        if(!FParse::Value(FCommandLine::Get(),TEXT("LapCaptureDir="),CaptureDirectory))
+            CaptureDirectory=FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Automation/Phase3"));
+        CaptureDirectory=FPaths::ConvertRelativePathToFull(CaptureDirectory);
+        IFileManager::Get().MakeDirectory(*CaptureDirectory,true);
+        UE_LOG(LogTemp,Display,TEXT("LAP_PHASE3_TEST: normal PlayerController InputKey path; native physical topology."));
     }
-    bAutoDemo = FParse::Param(FCommandLine::Get(), TEXT("LapAutoDemo"));
-    bAutoExit = FParse::Param(FCommandLine::Get(), TEXT("LapAutoExit"));
-    bKeyTest = FParse::Param(FCommandLine::Get(), TEXT("LapKeyTest"));
-    bPhase2Test = FParse::Param(FCommandLine::Get(), TEXT("LapPhase2Test"));
-    if (bPhase2Test) { bKeyTest = false; bAutoDemo = false; }
-    if (bVisualPreview) { bKeyTest = false; bAutoDemo = false; bPhase2Test = false; }
-    if (bKeyTest) bAutoDemo = false;
-    if (bAutoDemo || bKeyTest || bVisualPreview || bPhase2Test)
-    {
-        if (!FParse::Value(FCommandLine::Get(), TEXT("LapCaptureDir="), CaptureDirectory))
-            CaptureDirectory = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation/LapDemo"));
-        CaptureDirectory = FPaths::ConvertRelativePathToFull(CaptureDirectory);
-        IFileManager::Get().MakeDirectory(*CaptureDirectory, true);
-    }
-    if (bAutoDemo) UE_LOG(LogTemp, Display, TEXT("LAP_AUTODEMO enabled: SOFA will receive an automatic tool input sequence."));
-    if (bKeyTest) UE_LOG(LogTemp, Display, TEXT("LAP_KEYTEST enabled: injecting actual PlayerController key events through normal input polling."));
-    if (bVisualPreview) UE_LOG(LogTemp, Display, TEXT("LAP_VISUAL_PREVIEW: geometry/material review only; this is NOT a physics acceptance test."));
-    if (bPhase2Test) UE_LOG(LogTemp, Display, TEXT("LAP_PHASE2_TEST: actual PlayerController key events, authoritative SOFA jaw contacts, no direct tip-position writes."));
-    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-    {
-        PC->SetViewTarget(this);
-        PC->bShowMouseCursor = false;
-        PC->SetInputMode(FInputModeGameOnly());
-    }
+    if(APlayerController* PC=UGameplayStatics::GetPlayerController(this,0))
+    { PC->SetViewTarget(this); PC->bShowMouseCursor=false; PC->SetInputMode(FInputModeGameOnly()); }
 }
-
 void ATrainingScene::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     if (Bridge) Bridge->ShutdownBridge();
@@ -152,7 +130,7 @@ UStaticMeshComponent* ATrainingScene::AddShape(const TCHAR* Name, UStaticMesh* M
 
 void ATrainingScene::CreateEnvironment()
 {
-    // All dimensions use centimetres. The simulated block occupies x +/-6, y +/-4, z 0..1.2.
+    // Dimensions in centimetres. The thin physical membrane spans x +/-6, y +/-4 at rest z=0.6.
     AddShape(TEXT("TrainingBase"), CubeMesh, DarkMaterial, FVector(0, 0, -1.7), FVector(0.30, 0.24, 0.02));
     AddShape(TEXT("TrainingSurface"), CubeMesh, PadBackingMaterial, FVector(0, 0, -0.58), FVector(0.275, 0.215, 0.003));
     AddShape(TEXT("TrayEdgeLeft"), CubeMesh, TrayMaterial, FVector(-14.4, 0, -0.25), FVector(0.005, 0.225, 0.009));
@@ -225,828 +203,674 @@ void ATrainingScene::CreateEnvironment()
     ReflectionKey->SetWorldLocation(FVector(-6, -9, 17));
     ReflectionKey->SetWorldRotation((FVector(0, -1, 1) - FVector(-6, -9, 17)).Rotation());
 
-    // A static placeholder is displayed until the first SOFA state; it never deforms locally.
-    TissueVertices = { FVector(-6,-4,0), FVector(6,-4,0), FVector(6,4,0), FVector(-6,4,0),
-        FVector(-6,-4,1.2), FVector(6,-4,1.2), FVector(6,4,1.2), FVector(-6,4,1.2) };
-    TissueTriangles = { 0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4,
-        1,2,6, 1,6,5, 2,3,7, 2,7,6, 3,0,4, 3,4,7 };
-    UpdateTissueSurface();
-    bHasSurface = false;
+    // Physical membrane placeholder; replaced atomically by the first authoritative state.
+    TissueVertices={FVector(-6,-4,.6),FVector(6,-4,.6),FVector(6,4,.6),FVector(-6,4,.6)};
+    TissueTriangles={0,1,2,0,2,3};
+    UpdateTissueSurface(); bHasSurface=false;
 }
+
 
 void ATrainingScene::CreateInstrument()
 {
-    Shaft = AddShape(TEXT("InstrumentShaft"), CylinderMesh, MetalMaterial, ToolTip, FVector::OneVector);
-    Collar = AddShape(TEXT("InstrumentCollar"), CylinderMesh, MetalMaterial, ToolTip, FVector::OneVector);
-    ShaftSleeve = AddShape(TEXT("InstrumentInsulation"), CylinderMesh, InsulationMaterial, ToolTip, FVector::OneVector);
-    TrocarPort = AddShape(TEXT("TrocarSeal"), CylinderMesh, InsulationMaterial, FVector(12, -14, 15), FVector(0.010, 0.010, 0.006));
-    InstrumentHeadRoot = NewObject<USceneComponent>(this, TEXT("InstrumentHeadFrame"));
-    InstrumentHeadRoot->SetupAttachment(SceneRoot);
-    InstrumentHeadRoot->RegisterComponent();
-    auto Procedural = [&](const TCHAR* Name, const FTrainingRenderMesh& M, USceneComponent* Parent)
+    auto Procedural = [&](const FString& Name, const FTrainingRenderMesh& M, USceneComponent* Parent)
     {
-        auto* P = NewObject<UProceduralMeshComponent>(this, FName(Name));
-        P->SetupAttachment(Parent);
-        P->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        P->SetSimulatePhysics(false);
-        P->RegisterComponent();
-        P->SetMaterial(0, MetalMaterial);
+        auto* P = NewObject<UProceduralMeshComponent>(this, FName(*Name));
+        P->SetupAttachment(Parent); P->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        P->SetSimulatePhysics(false); P->RegisterComponent(); P->SetMaterial(0, MetalMaterial);
         P->CreateMeshSection_LinearColor(0, M.Positions, M.Triangles, M.Normals, M.UV, M.Colors, M.Tangents, false);
-        InstrumentDetailMeshes.Add(P);
-        return P;
+        InstrumentDetailMeshes.Add(P); return P;
     };
-    // Service jaw index 0 is the -Side blade; index 1 is the +Side blade.
-    JawLeft = Procedural(TEXT("SerratedJawNegative"), TrainingGeometry::MakeSerratedJaw(-1), SceneRoot);
-    JawRight = Procedural(TEXT("SerratedJawPositive"), TrainingGeometry::MakeSerratedJaw(1), SceneRoot);
-    for (int32 Sign : { -1, 1 })
+    for (int32 T = 0; T < 2; ++T)
     {
-        UProceduralMeshComponent* Fork = Procedural(*FString::Printf(TEXT("HingeFork_%d"), Sign),
-            TrainingGeometry::MakeBeveledBox(FVector(0.23, 0.048, 0.22), 0.012f), InstrumentHeadRoot);
-        Fork->SetRelativeLocation(FVector(-0.09, Sign * 0.184, 0));
-        UStaticMeshComponent* Pin = AddShape(*FString::Printf(TEXT("HingePin_%d"), Sign), CylinderMesh,
-            MetalMaterial, FVector::ZeroVector, FVector(0.0024, 0.0024, 0.0009));
-        Pin->AttachToComponent(InstrumentHeadRoot, FAttachmentTransformRules::KeepRelativeTransform);
-        Pin->SetRelativeLocation(FVector(0, Sign * 0.238, 0));
-        Pin->SetRelativeRotation(FRotator(0, 0, 90));
-        UStaticMeshComponent* Slot = AddShape(*FString::Printf(TEXT("HingeScrewSlot_%d"), Sign), CubeMesh,
-            DarkMaterial, FVector::ZeroVector, FVector(0.0013, 0.00015, 0.0003));
-        Slot->AttachToComponent(InstrumentHeadRoot, FAttachmentTransformRules::KeepRelativeTransform);
-        Slot->SetRelativeLocation(FVector(0, Sign * 0.286, 0));
-        Slot->SetRelativeRotation(FRotator(0, 0, 12));
+        auto Shape = [&](const TCHAR* Part, UMaterialInterface* Mat, const FVector& P, const FVector& S)
+        { return AddShape(*FString::Printf(TEXT("Tool%d_%s"), T, Part), CylinderMesh, Mat, P, S); };
+        Shafts.Add(Shape(TEXT("Shaft"), MetalMaterial, ToolTips[T], FVector::OneVector));
+        Collars.Add(Shape(TEXT("Collar"), MetalMaterial, ToolTips[T], FVector::OneVector));
+        Sleeves.Add(Shape(TEXT("Insulation"), InsulationMaterial, ToolTips[T], FVector::OneVector));
+        Ports.Add(Shape(TEXT("TrocarSeal"), InsulationMaterial, GetPivot(T), FVector(.010,.010,.006)));
+        auto* Root = NewObject<USceneComponent>(this, FName(*FString::Printf(TEXT("HeadFrame%d"), T)));
+        Root->SetupAttachment(SceneRoot); Root->RegisterComponent(); HeadRoots.Add(Root);
+        for (int32 Sign : {-1, 1})
+        {
+            ToolJaws.Add(Procedural(FString::Printf(TEXT("Tool%d_Blade%d"), T, Sign),
+                T == 0 ? TrainingGeometry::MakeSerratedJaw(Sign) : TrainingGeometry::MakeScissorBlade(Sign), SceneRoot));
+            auto* Fork = Procedural(FString::Printf(TEXT("Tool%d_Fork%d"), T, Sign),
+                TrainingGeometry::MakeBeveledBox(FVector(.23,.048,.22), .012f), Root);
+            Fork->SetRelativeLocation(FVector(-.09, Sign*.184, 0));
+            auto* Pin = AddShape(*FString::Printf(TEXT("Tool%d_Pin%d"), T, Sign), CylinderMesh,
+                MetalMaterial, FVector::ZeroVector, FVector(.0024,.0024,.0009));
+            Pin->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform);
+            Pin->SetRelativeLocation(FVector(0,Sign*.238,0)); Pin->SetRelativeRotation(FRotator(0,0,90));
+            auto* Slot = AddShape(*FString::Printf(TEXT("Tool%d_PinSlot%d"), T, Sign), CubeMesh,
+                DarkMaterial, FVector::ZeroVector, FVector(.0013,.00015,.0003));
+            Slot->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform);
+            Slot->SetRelativeLocation(FVector(0,Sign*.286,0)); Slot->SetRelativeRotation(FRotator(0,0,12));
+        }
+        // A thin identification band helps distinguish instruments without obscuring the blades.
+        auto* Band = Shape(TEXT("Identifier"), T == 0 ? AccentMaterial.Get() : MetalMaterial.Get(),
+            FVector::ZeroVector, FVector(.0049,.0049,.0013));
+        Band->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform);
+        Band->SetRelativeLocation(FVector(-.48,0,0)); Band->SetRelativeRotation(FRotator(0,0,90));
     }
-    ToolMarker = AddShape(TEXT("ToolTargetMarker"), SphereMesh, AccentMaterial, ToolTip, FVector(0.0012));
-    ToolMarker->SetCastShadow(false);
-    ToolMarker->SetVisibility(false);
     UpdateInstrument(1.0f);
 }
-
+FVector ATrainingScene::GetPivot(int32 Index) const { return FVector(Index == 0 ? 12 : -12, -14, 15); }
 void ATrainingScene::PositionRod(UStaticMeshComponent* Mesh, const FVector& A, const FVector& B, float RadiusCm)
 {
     if (!Mesh) return;
-    const FVector D = B - A;
-    Mesh->SetWorldLocation((A + B) * 0.5);
+    const FVector D = B-A; Mesh->SetWorldLocation((A+B)*.5);
     Mesh->SetWorldRotation(FRotationMatrix::MakeFromZ(D.GetSafeNormal()).Rotator());
-    Mesh->SetWorldScale3D(FVector(RadiusCm / 50.0f, RadiusCm / 50.0f, D.Size() / 100.0f));
+    Mesh->SetWorldScale3D(FVector(RadiusCm/50.0f, RadiusCm/50.0f, D.Size()/100.0f));
 }
-
 void ATrainingScene::UpdateInstrument(float DeltaSeconds)
 {
-    const bool bAuthoritative = Bridge && Bridge->IsConnected() && Bridge->HasToolState();
-    RenderedTip = bAuthoritative ? Bridge->GetActualTipCm() : ToolTip;
-    const float ActualRoll = bAuthoritative ? Bridge->GetActualRollDeg() : ToolRoll;
-    JawOpenBlend = bAuthoritative ? Bridge->GetJawOpenFraction() : (bJawClosed ? 0.0f : 1.0f);
-    const FVector TrocarPivot(12.0, -14.0, 15.0);
-    const FVector Axis = (TrocarPivot - RenderedTip).GetSafeNormal();
-    FVector Side = FVector::CrossProduct(Axis, FVector::UpVector).GetSafeNormal();
-    if (Side.IsNearlyZero()) Side = FVector::CrossProduct(Axis, FVector::RightVector).GetSafeNormal();
-    Side = Side.RotateAngleAxis(ActualRoll, Axis);
-    const FVector Width = FVector::CrossProduct(Axis, Side).GetSafeNormal();
-    const FVector Joint = RenderedTip + Axis * 1.45;
-    PositionRod(Shaft, Joint + Axis * 0.30, TrocarPivot + Axis * 2.0, 0.20f);
-    PositionRod(ShaftSleeve, Joint + Axis * 3.0, TrocarPivot - Axis * 0.35, 0.205f);
-    PositionRod(Collar, Joint - Axis * 0.18, Joint + Axis * 0.48, 0.24f);
-    InstrumentHeadRoot->SetWorldLocation(Joint);
-    InstrumentHeadRoot->SetWorldRotation(FRotationMatrix::MakeFromXY(-Axis, Width).Rotator());
-    TrocarPort->SetWorldRotation(FRotationMatrix::MakeFromZ(Axis).Rotator());
-    for (int32 I = 0; I < 2; ++I)
+    for (int32 T = 0; T < 2; ++T)
     {
-        UProceduralMeshComponent* Jaw = I == 0 ? JawLeft.Get() : JawRight.Get();
-        FTransform Pose;
-        if (bAuthoritative && Bridge->GetJawPose(I, Pose)) Jaw->SetWorldTransform(Pose);
-        else
-        {
-            const double Sign = I == 0 ? -1.0 : 1.0;
-            const double Angle = FMath::DegreesToRadians(FMath::Lerp(2.0, 40.0, static_cast<double>(JawOpenBlend)));
-            const FVector Forward = -Axis * FMath::Cos(Angle) + Side * (Sign * FMath::Sin(Angle));
-            const FVector Hinge = Joint + Side * (Sign * 0.0825);
-            Jaw->SetWorldLocation(Hinge + Forward * 0.725);
-            Jaw->SetWorldRotation(FRotationMatrix::MakeFromXY(Forward, Width).Rotator());
-        }
-    }
-    ToolMarker->SetWorldLocation(RenderedTip);
-}
-
-void ATrainingScene::UpdateCamera()
-{
-    FVector Target(0, 0, 0.8);
-    FVector Position = ViewMode == 1 ? FVector(0, -0.1, 34.0) :
-        ViewMode == 2 ? FVector(18, -27, 8) : FVector(15, -24, 28);
-    if (ViewMode == 3)
-    {
-        const FVector Axis = (FVector(12, -14, 15) - RenderedTip).GetSafeNormal();
+        const FLapToolState* State = Bridge && Bridge->IsConnected() ? Bridge->GetToolState(T) : nullptr;
+        ActualTips[T] = State ? State->ActualTipCm : ToolTips[T];
+        const float Roll = State ? State->RollDeg : ToolRolls[T];
+        const float Open = State ? State->JawOpenFraction : (ToolClosed[T] ? 0.0f : 1.0f);
+        const FVector Pivot = GetPivot(T), Axis = (Pivot-ActualTips[T]).GetSafeNormal();
         FVector Side = FVector::CrossProduct(Axis, FVector::UpVector).GetSafeNormal();
         if (Side.IsNearlyZero()) Side = FVector::RightVector;
-        Target = RenderedTip + Axis * 0.75;
-        Position = Target + (Side * 3.4 + FVector::UpVector * 4.5 - Axis * 0.8).GetSafeNormal() * 7.8;
+        Side = Side.RotateAngleAxis(Roll, Axis);
+        const FVector Width = FVector::CrossProduct(Axis, Side).GetSafeNormal();
+        const FVector Joint = ActualTips[T]+Axis*1.45;
+        PositionRod(Shafts[T], Joint+Axis*.30, Pivot+Axis*2.0, .20f);
+        PositionRod(Sleeves[T], Joint+Axis*3.0, Pivot-Axis*.35, .205f);
+        PositionRod(Collars[T], Joint-Axis*.18, Joint+Axis*.48, .24f);
+        HeadRoots[T]->SetWorldLocation(Joint);
+        HeadRoots[T]->SetWorldRotation(FRotationMatrix::MakeFromXY(-Axis, Width).Rotator());
+        Ports[T]->SetWorldRotation(FRotationMatrix::MakeFromZ(Axis).Rotator());
+        for (int32 J=0; J<2; ++J)
+        {
+            UProceduralMeshComponent* Jaw = ToolJaws[T*2+J];
+            if (State && State->JawPoses.IsValidIndex(J))
+            {
+                const FLapJawPose& P = State->JawPoses[J];
+                Jaw->SetWorldLocation(P.CenterCm);
+                Jaw->SetWorldRotation(FRotationMatrix::MakeFromXY(P.Axis, P.Side).Rotator());
+            }
+            else
+            {
+                const double Sign = J == 0 ? -1.0 : 1.0;
+                const double Angle = FMath::DegreesToRadians(FMath::Lerp(0.0, 40.0, static_cast<double>(Open)));
+                const FVector Forward = -Axis*FMath::Cos(Angle)+Side*(Sign*FMath::Sin(Angle));
+                Jaw->SetWorldLocation(Joint+Side*(Sign*.0825)+Forward*.725);
+                Jaw->SetWorldRotation(FRotationMatrix::MakeFromXY(Forward, Width).Rotator());
+            }
+        }
+        if (T == ActiveTool) JawOpenBlend = Open;
     }
-    Camera->SetWorldLocation(Position);
-    Camera->SetWorldRotation((Target - Position).Rotation());
-    Camera->SetFieldOfView(ViewMode == 3 ? 42.0f : bOverview ? 49.0f : 47.0f);
-    if (EndoscopeLight) EndoscopeLight->SetIntensity(ViewMode == 3 ? 0.006f : 0.30f);
+    RenderedTip = ActualTips[ActiveTool];
 }
-
+void ATrainingScene::UpdateCamera()
+{
+    FVector Target(0,0,.6);
+    FVector Position = ViewMode == 1 ? FVector(0,-.1,34) : ViewMode == 2 ? FVector(18,-27,8) : FVector(0,-28,29);
+    if (ViewMode == 3)
+    {
+        const FVector Axis = (GetPivot(ActiveTool)-RenderedTip).GetSafeNormal();
+        FVector Side = FVector::CrossProduct(Axis,FVector::UpVector).GetSafeNormal();
+        if (Side.IsNearlyZero()) Side = FVector::RightVector;
+        Target = RenderedTip+Axis*.75;
+        Position = Target+(Side*3.4+FVector::UpVector*4.5-Axis*.8).GetSafeNormal()*7.8;
+    }
+    Camera->SetWorldLocation(Position); Camera->SetWorldRotation((Target-Position).Rotation());
+    Camera->SetFieldOfView(ViewMode == 3 ? 42.0f : 47.0f);
+    if (EndoscopeLight) EndoscopeLight->SetIntensity(ViewMode == 3 ? .006f : .30f);
+}
+void ATrainingScene::SaveActiveCommand() { ToolTips[ActiveTool]=ToolTip; ToolRolls[ActiveTool]=ToolRoll; ToolClosed[ActiveTool]=bJawClosed; }
+void ATrainingScene::LoadActiveCommand() { ToolTip=ToolTips[ActiveTool]; ToolRoll=ToolRolls[ActiveTool]; bJawClosed=ToolClosed[ActiveTool]; }
+void ATrainingScene::SwitchTool()
+{
+    SaveActiveCommand();
+    ToolClosed[ActiveTool] = ActiveTool == 0 && bGrasperLatched;
+    ActiveTool = 1-ActiveTool; LoadActiveCommand();
+    bSuppressSpace = true;
+    if (ViewMode == 3) UpdateCamera();
+}
 void ATrainingScene::ResetExercise()
 {
-    ToolTip = FVector(0, 0, 2.2);
-    ToolRoll = 0.0f;
-    ActivePreset = 1;
-    bJawClosed = false;
-    bResetRequested = true;
-    SimulationElapsed = 0.0f;
-    DemoElapsed = 0.0f;
-    DemoPhase = -1;
-    DemoCaptureMask = 0;
-    ++ResetCount;
-    UE_LOG(LogTemp, Display, TEXT("LAP_RESET requested, count=%d"), ResetCount);
+    ToolTips[0]=FVector(-2.2,-4.7,.6); ToolTips[1]=FVector(2.2,-4.7,.6);
+    ToolRolls[0]=ToolRolls[1]=90.0f; ToolClosed[0]=ToolClosed[1]=false;
+    ActiveTool=0; ActivePreset=1; bGrasperLatched=false; bSuppressSpace=true;
+    bProtectionNotice=false; bProtectionHasOpened=false;
+    LoadActiveCommand(); bResetRequested=true; SimulationElapsed=0; ++ResetCount;
+    UE_LOG(LogTemp,Display,TEXT("LAP_RESET requested count=%d"),ResetCount);
 }
-
 void ATrainingScene::SelectPreset(int32 Preset)
 {
-    ResetExercise();
-    ActivePreset = Preset;
-    if (Preset == 2)
+    if (Preset == 3)
     {
-        ToolTip = FVector(0, -4.6, 0.6);
-        ToolRoll = 90.0f;
+        SaveActiveCommand(); ToolClosed[1]=false;
+        ToolTips[1]=FVector(2.2,-4.7,.6); ToolRolls[1]=90.0f;
+        ActiveTool=1; LoadActiveCommand(); bSuppressSpace=true;
     }
     else
     {
-        ToolTip = FVector(0, -1.5, 2.5);
-        ToolRoll = 0.0f;
+        ResetExercise(); ActivePreset=Preset;
+        if (Preset == 2) { ToolTips[0]=FVector(-2.2,-3.4,.45); LoadActiveCommand(); }
     }
-    UE_LOG(LogTemp, Display, TEXT("LAP_PRESET id=%d tip_cm=%s roll_deg=%.1f"), Preset, *ToolTip.ToString(), ToolRoll);
 }
-
 void ATrainingScene::ApplyWorkspaceLimits()
 {
-    const FVector Requested = ToolTip;
-    const FVector Pivot(12, -14, 15);
-    const FVector Reference = (FVector(0, 0, 1.2) - Pivot).GetSafeNormal();
-    ToolTip.X = FMath::Clamp(ToolTip.X, -9.0, 9.0);
-    ToolTip.Y = FMath::Clamp(ToolTip.Y, -7.0, 6.5);
-    ToolTip.Z = FMath::Clamp(ToolTip.Z, -0.5, 9.0);
-    FVector Ray = ToolTip - Pivot;
-    const double Length = FMath::Clamp(Ray.Size(), 12.0, 30.0);
-    Ray = Ray.GetSafeNormal(UE_SMALL_NUMBER, Reference);
-    const double CosLimit = FMath::Cos(FMath::DegreesToRadians(32.0));
-    const double Dot = FVector::DotProduct(Ray, Reference);
-    if (Dot < CosLimit)
+    const FVector Requested=ToolTip, Pivot=GetPivot(ActiveTool);
+    const FVector Reference=(FVector(0,0,.6)-Pivot).GetSafeNormal();
+    ToolTip.X=FMath::Clamp(ToolTip.X,-8.5,8.5); ToolTip.Y=FMath::Clamp(ToolTip.Y,-6.5,6.0);
+    ToolTip.Z=FMath::Clamp(ToolTip.Z,-.2,8.0);
+    FVector Ray=ToolTip-Pivot; const double Length=FMath::Clamp(Ray.Size(),12.0,30.0);
+    Ray=Ray.GetSafeNormal(UE_SMALL_NUMBER,Reference);
+    const double CosLimit=FMath::Cos(FMath::DegreesToRadians(32.0)), Dot=FVector::DotProduct(Ray,Reference);
+    if (Dot<CosLimit)
     {
-        const FVector Tangent = (Ray - Reference * Dot).GetSafeNormal(UE_SMALL_NUMBER, FVector::RightVector);
-        Ray = Reference * CosLimit + Tangent * FMath::Sin(FMath::DegreesToRadians(32.0));
+        const FVector Tangent=(Ray-Reference*Dot).GetSafeNormal(UE_SMALL_NUMBER,FVector::RightVector);
+        Ray=Reference*CosLimit+Tangent*FMath::Sin(FMath::DegreesToRadians(32.0));
     }
-    ToolTip = Pivot + Ray * Length;
-    ToolRoll = FMath::UnwindDegrees(ToolRoll);
-    bMotionLimited = !ToolTip.Equals(Requested, 0.0001);
+    ToolTip=Pivot+Ray*Length; ToolRoll=FMath::UnwindDegrees(ToolRoll);
+    bMotionLimited=!ToolTip.Equals(Requested,.0001);
+    SaveActiveCommand();
 }
-
 void ATrainingScene::UpdateInput(float DeltaSeconds)
 {
-    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-    if (!PC) return;
+    APlayerController* PC=UGameplayStatics::GetPlayerController(this,0); if (!PC) return;
     if (PC->WasInputKeyJustPressed(EKeys::Escape))
     {
-        bMouseReleased = true;
-        bJawClosed = false;
-        PC->bShowMouseCursor = true;
-        FInputModeGameAndUI Mode;
-        Mode.SetHideCursorDuringCapture(false);
-        PC->SetInputMode(Mode);
+        bMouseReleased=true; bGrasperLatched=false; bJawClosed=false; ToolClosed[0]=ToolClosed[1]=false; bSuppressSpace=true;
+        PC->bShowMouseCursor=true; FInputModeGameAndUI Mode; Mode.SetHideCursorDuringCapture(false); PC->SetInputMode(Mode);
     }
     if (PC->WasInputKeyJustPressed(EKeys::RightMouseButton) && bMouseReleased)
-    {
-        bMouseReleased = false;
-        PC->bShowMouseCursor = false;
-        PC->SetInputMode(FInputModeGameOnly());
-    }
-    if (PC->WasInputKeyJustPressed(EKeys::F10))
-    {
-        UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, false);
-    }
-    if (PC->WasInputKeyJustPressed(EKeys::H)) bShowHelp = !bShowHelp;
-    if (PC->WasInputKeyJustPressed(EKeys::Tab)) { ViewMode = (ViewMode + 1) % 4; bOverview = ViewMode == 1; UpdateCamera(); }
+    { bMouseReleased=false; PC->bShowMouseCursor=false; PC->SetInputMode(FInputModeGameOnly()); }
+    if (PC->WasInputKeyJustPressed(EKeys::F10)) UKismetSystemLibrary::QuitGame(this,PC,EQuitPreference::Quit,false);
+    if (PC->WasInputKeyJustPressed(EKeys::H)) bShowHelp=!bShowHelp;
+    if (PC->WasInputKeyJustPressed(EKeys::Tab)) { ViewMode=(ViewMode+1)%4; UpdateCamera(); }
     if (PC->WasInputKeyJustPressed(EKeys::R)) ResetExercise();
     if (PC->WasInputKeyJustPressed(EKeys::One)) SelectPreset(1);
     if (PC->WasInputKeyJustPressed(EKeys::Two)) SelectPreset(2);
-    if (bAutoDemo)
-    {
-        if (!IsPhysicsConnected()) return;
-        DemoElapsed += DeltaSeconds;
-        const int32 Phase = DemoElapsed < 2.0f ? 0 : DemoElapsed < 4.0f ? 1 :
-            DemoElapsed < 6.0f ? 2 : DemoElapsed < 11.0f ? 3 : DemoElapsed < 14.0f ? 4 :
-            DemoElapsed < 17.0f ? 5 : 6;
-        if (Phase != DemoPhase)
-        {
-            DemoPhase = Phase;
-            UE_LOG(LogTemp, Display, TEXT("LAP_AUTODEMO phase=%d grasp=%d force_N=%.4f tip_cm=%s"),
-                Phase, IsGraspActive(), GetForceNewton(), *ToolTip.ToString());
-            if (Phase == 6)
-            {
-                bResetRequested = true;
-                SimulationElapsed = 0.0f;
-                ++ResetCount;
-            }
-        }
-        bJawClosed = Phase == 2 || Phase == 3;
-        if (Phase == 0) ToolTip = FVector(0, 0, 2.2);
-        else if (Phase == 1) ToolTip = FMath::Lerp(FVector(0, 0, 2.2), FVector(0, 0, 1.2), (DemoElapsed - 2.0f) / 2.0f);
-        else if (Phase == 2) ToolTip = FVector(0, 0, 1.2);
-        else if (Phase == 3) ToolTip = FMath::Lerp(FVector(0, 0, 1.2), FVector(1, 0, 3.0), (DemoElapsed - 6.0f) / 5.0f);
-        else if (Phase == 4) ToolTip = FMath::Lerp(FVector(1, 0, 3.0), FVector(0, 0, 4.0), (DemoElapsed - 11.0f) / 3.0f);
-        else ToolTip = Phase == 6 ? FVector(0, 0, 2.2) : FVector(0, 0, 4.0);
-        const float CaptureTimes[] = { 1.5f, 5.5f, 10.5f, 15.5f, 18.5f };
-        const TCHAR* CaptureNames[] = { TEXT("01_initial.png"), TEXT("02_grasp.png"), TEXT("03_traction.png"),
-            TEXT("04_release.png"), TEXT("05_reset.png") };
-        for (uint32 I = 0; I < 5; ++I)
-        {
-            if (DemoElapsed >= CaptureTimes[I] && !(DemoCaptureMask & (1u << I)))
-            {
-                DemoCaptureMask |= (1u << I);
-                const FString Path = FPaths::Combine(CaptureDirectory, CaptureNames[I]);
-                FScreenshotRequest::RequestScreenshot(Path, true, false);
-                UE_LOG(LogTemp, Display, TEXT("LAP_AUTODEMO screenshot=%s grasp=%d force_N=%.4f"),
-                    *Path, IsGraspActive(), GetForceNewton());
-            }
-        }
-        if (DemoElapsed > 20.0f && bAutoExit)
-        {
-            UE_LOG(LogTemp, Display, TEXT("LAP_AUTODEMO complete. Requesting exit."));
-            FPlatformMisc::RequestExit(false);
-        }
-        return;
-    }
+    if (PC->WasInputKeyJustPressed(EKeys::Three)) SelectPreset(3);
     if (bMouseReleased) return;
-    const float Speed = PC->IsInputKeyDown(EKeys::LeftControl) ? 0.65f : PC->IsInputKeyDown(EKeys::LeftShift) ? 5.0f : 2.5f;
-    FVector Right = Camera->GetRightVector();
-    Right.Z = 0;
-    Right.Normalize();
-    const FVector Up = FVector::CrossProduct(FVector::UpVector, Right).GetSafeNormal();
+    if (PC->WasInputKeyJustPressed(EKeys::C)) SwitchTool();
+    if (PC->WasInputKeyJustPressed(EKeys::F) && IsPhysicsConnected())
+    {
+        // The selected tool may close. Opening the parked grasper is always allowed.
+        if(bGrasperLatched) bGrasperLatched=false;
+        else if(ActiveTool==0) bGrasperLatched=true;
+        if(bGrasperLatched && bProtectionHasOpened) bProtectionNotice=false;
+    }
+    if (!PC->IsInputKeyDown(EKeys::SpaceBar)) bSuppressSpace=false;
+    const bool Space=PC->IsInputKeyDown(EKeys::SpaceBar) && !bSuppressSpace && IsPhysicsConnected();
+    if(Space && ActiveTool==0 && bProtectionHasOpened && PC->WasInputKeyJustPressed(EKeys::SpaceBar)) bProtectionNotice=false;
+    ToolClosed[0]=bGrasperLatched || (ActiveTool==0 && Space);
+    ToolClosed[1]=ActiveTool==1 && Space; bJawClosed=ToolClosed[ActiveTool];
+    const float Speed=PC->IsInputKeyDown(EKeys::LeftControl) ? .65f : PC->IsInputKeyDown(EKeys::LeftShift) ? 5.0f : 2.5f;
+    FVector Right=Camera->GetRightVector(); Right.Z=0; Right.Normalize();
+    FVector Up=Camera->GetUpVector(); Up.Z=0;
+    if(!Up.Normalize()) { Up=Camera->GetForwardVector(); Up.Z=0; Up.Normalize(); }
     if (PC->IsInputKeyDown(EKeys::RightMouseButton))
     {
-        float MX, MY;
-        PC->GetInputMouseDelta(MX, MY);
-        ToolTip += (Right * FMath::Clamp(MX, -60.0f, 60.0f) + Up * FMath::Clamp(MY, -60.0f, 60.0f)) * 0.025f;
+        float MX,MY; PC->GetInputMouseDelta(MX,MY);
+        ToolTip+=(Right*FMath::Clamp(MX,-60.0f,60.0f)+Up*FMath::Clamp(MY,-60.0f,60.0f))*.025f;
     }
-    if (PC->IsInputKeyDown(EKeys::Left)) ToolTip -= Right * Speed * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::Right)) ToolTip += Right * Speed * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::Up)) ToolTip += Up * Speed * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::Down)) ToolTip -= Up * Speed * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::W)) ToolTip.Z += Speed * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::S)) ToolTip.Z -= Speed * DeltaSeconds;
-    const FVector ToolAxis = (FVector(12, -14, 15) - ToolTip).GetSafeNormal();
-    if (PC->IsInputKeyDown(EKeys::T)) ToolTip -= ToolAxis * Speed * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::G)) ToolTip += ToolAxis * Speed * DeltaSeconds;
-    if (PC->WasInputKeyJustPressed(EKeys::MouseScrollUp)) ToolTip.Z += 0.18f;
-    if (PC->WasInputKeyJustPressed(EKeys::MouseScrollDown)) ToolTip.Z -= 0.18f;
-    if (PC->IsInputKeyDown(EKeys::Q)) ToolRoll -= 80.0f * DeltaSeconds;
-    if (PC->IsInputKeyDown(EKeys::E)) ToolRoll += 80.0f * DeltaSeconds;
-    bJawClosed = PC->IsInputKeyDown(EKeys::SpaceBar);
+    if (PC->IsInputKeyDown(EKeys::Left)) ToolTip-=Right*Speed*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::Right)) ToolTip+=Right*Speed*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::Up)) ToolTip+=Up*Speed*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::Down)) ToolTip-=Up*Speed*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::W)) ToolTip.Z+=Speed*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::S)) ToolTip.Z-=Speed*DeltaSeconds;
+    const FVector Axis=(GetPivot(ActiveTool)-ToolTip).GetSafeNormal();
+    if (PC->IsInputKeyDown(EKeys::T)) ToolTip-=Axis*Speed*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::G)) ToolTip+=Axis*Speed*DeltaSeconds;
+    if (PC->WasInputKeyJustPressed(EKeys::MouseScrollUp)) ToolTip.Z+=.18f;
+    if (PC->WasInputKeyJustPressed(EKeys::MouseScrollDown)) ToolTip.Z-=.18f;
+    if (PC->IsInputKeyDown(EKeys::Q)) ToolRoll-=80.0f*DeltaSeconds;
+    if (PC->IsInputKeyDown(EKeys::E)) ToolRoll+=80.0f*DeltaSeconds;
 }
-
-void ATrainingScene::UpdateKeyTest(float DeltaSeconds)
-{
-    if (!bKeyTest || bKeyTestFinished) return;
-    KeyTestWaitElapsed += DeltaSeconds;
-    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-    if (!PC || !IsPhysicsConnected())
-    {
-        if (KeyTestWaitElapsed > 15.0f) FinishKeyTest(TEXT("SOFA connection or PlayerController unavailable"));
-        return;
-    }
-    KeyTestElapsed += DeltaSeconds;
-    KeyTestMinHeight = FMath::Min(KeyTestMinHeight, static_cast<float>(ToolTip.Z));
-    if (IsGraspActive())
-    {
-        bKeyTestCaptured = true;
-        KeyTestMaxHeldHeight = FMath::Max(KeyTestMaxHeldHeight, static_cast<float>(ToolTip.Z));
-        KeyTestPeakForce = FMath::Max(KeyTestPeakForce, GetForceNewton());
-    }
-    if (KeyTestElapsed > 5.0f && KeyTestElapsed < 6.0f && !IsGraspActive() && !bJawClosed)
-        bKeyTestReleased = true;
-    auto KeyEvent = [&](uint32 Index, float AtSeconds, const FKey& Key, EInputEvent Event)
-    {
-        if (KeyTestElapsed < AtSeconds || (KeyTestEventMask & (1u << Index))) return;
-        KeyTestEventMask |= (1u << Index);
-        const FInputKeyEventArgs Args(nullptr, FInputDeviceId::CreateFromInternalId(0), Key, Event,
-            Event == IE_Released ? 0.0f : 1.0f, false, FPlatformTime::Cycles64());
-        PC->InputKey(Args);
-        UE_LOG(LogTemp, Display, TEXT("LAP_KEYTEST t=%.3f key=%s event=%s tip=%s grasp=%d force_N=%.5f"),
-            KeyTestElapsed, *Key.ToString(), Event == IE_Released ? TEXT("release") : TEXT("press"),
-            *ToolTip.ToString(), IsGraspActive(), GetForceNewton());
-    };
-    // Events are consumed by the regular PlayerController input tick, then UpdateInput polls them.
-    // In particular, this test never writes ToolTip, bJawClosed, or the view mode directly.
-    KeyEvent(0, 0.50f, EKeys::S, IE_Pressed);
-    KeyEvent(1, 0.90f, EKeys::S, IE_Released);
-    KeyEvent(2, 1.50f, EKeys::SpaceBar, IE_Pressed);
-    KeyEvent(3, 2.50f, EKeys::W, IE_Pressed);
-    KeyEvent(4, 3.30f, EKeys::W, IE_Released);
-    KeyEvent(5, 4.50f, EKeys::SpaceBar, IE_Released);
-    KeyEvent(6, 6.00f, EKeys::R, IE_Pressed);
-    KeyEvent(7, 6.15f, EKeys::R, IE_Released);
-    KeyEvent(8, 7.00f, EKeys::Tab, IE_Pressed);
-    KeyEvent(9, 7.15f, EKeys::Tab, IE_Released);
-    if (KeyTestElapsed > 8.0f && !(KeyTestEventMask & (1u << 10)))
-    {
-        KeyTestEventMask |= (1u << 10);
-        FScreenshotRequest::RequestScreenshot(FPaths::Combine(CaptureDirectory, TEXT("06_key_input_overview.png")), true, false);
-    }
-    if (KeyTestElapsed > 9.0f) FinishKeyTest();
-}
-
-void ATrainingScene::UpdateVisualPreview(float DeltaSeconds)
-{
-    if (!bVisualPreview) return;
-    PreviewElapsed += DeltaSeconds;
-    if (PreviewElapsed > 8.0f && !(PreviewMask & 1u))
-    {
-        PreviewMask |= 1u;
-        FScreenshotRequest::RequestScreenshot(FPaths::Combine(CaptureDirectory, TEXT("visual_01_scene.png")), true, false);
-    }
-    if (PreviewElapsed > 9.5f && !(PreviewMask & 2u))
-    {
-        PreviewMask |= 2u;
-        ViewMode = 3;
-        bOverview = false;
-        bShowHelp = false;
-        UpdateCamera();
-    }
-    if (PreviewElapsed > 10.5f && !(PreviewMask & 4u))
-    {
-        PreviewMask |= 4u;
-        FScreenshotRequest::RequestScreenshot(FPaths::Combine(CaptureDirectory, TEXT("visual_02_jaw_detail.png")), true, false);
-    }
-    if (PreviewElapsed > 12.5f && bAutoExit)
-    {
-        UE_LOG(LogTemp, Display, TEXT("LAP_VISUAL_PREVIEW complete; geometry/material preview only."));
-        FPlatformMisc::RequestExit(false);
-    }
-}
-
-void ATrainingScene::SetPhase2Key(const FKey& Key, bool bDown)
-{
-    const FName Name = Key.GetFName();
-    if (Phase2HeldKeys.Contains(Name) == bDown) return;
-    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-    if (!PC) return;
-    if (bDown) Phase2HeldKeys.Add(Name); else Phase2HeldKeys.Remove(Name);
-    PC->InputKey(FInputKeyEventArgs(nullptr, FInputDeviceId::CreateFromInternalId(0), Key,
-        bDown ? IE_Pressed : IE_Released, bDown ? 1.0f : 0.0f, false, FPlatformTime::Cycles64()));
-    UE_LOG(LogTemp, Display, TEXT("LAP_PHASE2_KEY stage=%d key=%s down=%d command=%s actual=%s"),
-        Phase2Stage, *Key.ToString(), bDown, *ToolTip.ToString(), *RenderedTip.ToString());
-}
-
-void ATrainingScene::StopPhase2Motion()
-{
-    for (const FKey& Key : { EKeys::W, EKeys::S, EKeys::Up, EKeys::Down, EKeys::Left, EKeys::Right,
-        EKeys::T, EKeys::G, EKeys::LeftControl, EKeys::LeftShift, EKeys::Q, EKeys::E }) SetPhase2Key(Key, false);
-}
-
-bool ATrainingScene::DrivePhase2To(const FVector& Target)
-{
-    const FVector Error = Target - ToolTip;
-    FVector Right = Camera->GetRightVector(); Right.Z = 0; Right.Normalize();
-    const FVector Up = FVector::CrossProduct(FVector::UpVector, Right).GetSafeNormal();
-    const double X = FVector::DotProduct(Error, Right), Y = FVector::DotProduct(Error, Up);
-    constexpr double Tolerance = 0.014;
-    SetPhase2Key(EKeys::LeftControl, true);
-    SetPhase2Key(EKeys::Right, X > Tolerance);
-    SetPhase2Key(EKeys::Left, X < -Tolerance);
-    SetPhase2Key(EKeys::Up, Y > Tolerance);
-    SetPhase2Key(EKeys::Down, Y < -Tolerance);
-    SetPhase2Key(EKeys::W, Error.Z > Tolerance);
-    SetPhase2Key(EKeys::S, Error.Z < -Tolerance);
-    return Error.Size() < 0.045 && FVector::Distance(RenderedTip, Target) < 0.12;
-}
-
-void ATrainingScene::AdvancePhase2(int32 Stage)
-{
-    StopPhase2Motion();
-    Phase2Stage = Stage;
-    Phase2StageTime = 0.0f;
-    Phase2StageMask = 0;
-    Phase2Dwell = 0.0f;
-    Phase2ContinuousHold = 0.0f;
-    Phase2HoldFrames = 0;
-    UE_LOG(LogTemp, Display, TEXT("LAP_PHASE2_STAGE stage=%d contact=%d grip=%d state=%s force=%.5f tip=%s"),
-        Stage, GetContactCount(), IsGraspActive(), *GetGripState(), GetForceNewton(), *RenderedTip.ToString());
-}
-
-bool ATrainingScene::Phase2TimedOut(float TimeoutSeconds, const TCHAR* Action)
-{
-    if (Phase2StageTime <= TimeoutSeconds) return false;
-    const FString Reason = FString::Printf(TEXT("Stage %d timed out: %s"), Phase2Stage, Action);
-    Phase2Failures.AddUnique(Reason);
-    UE_LOG(LogTemp, Error, TEXT("LAP_PHASE2_ASSERT %s"), *Reason);
-    return true;
-}
-
-void ATrainingScene::CapturePhase2(const TCHAR* Filename)
-{
-    const FString Path = FPaths::Combine(CaptureDirectory, Filename);
-    FScreenshotRequest::RequestScreenshot(Path, true, false);
-    UE_LOG(LogTemp, Display, TEXT("LAP_PHASE2_CAPTURE stage=%d path=%s"), Phase2Stage, *Path);
-}
-
-void ATrainingScene::UpdatePhase2Test(float DeltaSeconds)
-{
-    if (!bPhase2Test || bPhase2Finished) return;
-    Phase2WaitTime += DeltaSeconds;
-    if (Bridge && Bridge->GetUnhealthyStateCount() > 0)
-        Phase2Failures.AddUnique(TEXT("SOFA reported an unhealthy state during this session"));
-    if (Bridge && Bridge->GetRejectedStateCount() > 0)
-        Phase2Failures.AddUnique(TEXT("Bridge rejected one or more malformed physics states"));
-    if (!IsPhysicsConnected())
-    {
-        if (bPhase2Started) Phase2Failures.AddUnique(TEXT("Physics connection became unavailable or stale after test start"));
-        if (Phase2WaitTime > 35.0f) FinishPhase2Test(TEXT("SOFA connection unavailable during test"));
-        return;
-    }
-    bPhase2Started = true;
-    if (!Bridge->IsHealthy()) Phase2Failures.AddUnique(TEXT("SOFA health check failed"));
-    if (Phase2WaitTime > 210.0f) { FinishPhase2Test(TEXT("Phase 2 acceptance sequence timed out")); return; }
-    Phase2StageTime += DeltaSeconds;
-    const uint64 ObservedFrame = Bridge->GetFrameNumber();
-    const bool bNewPhysicsFrame = ObservedFrame != Phase2LastObservedFrame;
-    Phase2LastObservedFrame = ObservedFrame;
-    Phase2PeakContactN = FMath::Max(Phase2PeakContactN, GetContactForceNewton());
-    Phase2PeakGripN = FMath::Max(Phase2PeakGripN, GetForceNewton());
-    Phase2MaxPenetrationMm = FMath::Max(Phase2MaxPenetrationMm, GetPenetrationMm());
-    Phase2MaxSlipMm = FMath::Max(Phase2MaxSlipMm, GetSlipDistanceMm());
-    if (Phase2Stage == 2 && GetContactCount() > 0 && GetContactForceNewton() > 0.005f) bPhase2Contact = true;
-    if (Phase2Stage == 3 && bPhase2Contact && GetContactCount() == 0) bPhase2ContactReleased = true;
-    if ((Phase2Stage >= 6 && Phase2Stage <= 8) || Phase2Stage == 12)
-    {
-        bPhase2Grasp |= IsGraspActive();
-        if (Phase2Stage == 8 && !IsGraspActive())
-            bPhase2Slip |= IsSlipping() || GetSlipDistanceMm() > 0.05f;
-        if (Bridge) Phase2MaxTissueMm = FMath::Max(Phase2MaxTissueMm, Bridge->GetMaxDisplacementCm() * 10.0f);
-    }
-    if (Phase2Stage == 9 && !IsGraspActive() && JawOpenBlend > 0.9f) bPhase2Released = true;
-    if (Phase2Stage == 10 && bMotionLimited) bPhase2Limit = true;
-
-    switch (Phase2Stage)
-    {
-    case 0:
-        SetPhase2Key(EKeys::One, Phase2StageTime < 0.15f);
-        bPhase2Preset1 = ResetCount >= 1 && ActivePreset == 1 && Bridge->HasAcknowledgedReset() &&
-            FVector::Distance(RenderedTip, FVector(0, -1.5, 2.5)) < 0.12 && FMath::Abs(GetRollDeg()) < 2.0f;
-        if ((Phase2StageTime > 0.65f && bPhase2Preset1) || Phase2TimedOut(8.0f, TEXT("preset 1 acknowledged and actual pose reached")))
-            AdvancePhase2(1);
-        break;
-    case 1:
-        SetPhase2Key(EKeys::E, Phase2StageTime < 0.15f);
-        if (Phase2StageTime > 0.15f && Phase2StageTime < 0.60f) bPhase2Roll |= GetRollDeg() > 5.0f;
-        SetPhase2Key(EKeys::Q, Phase2StageTime > 0.60f && ToolRoll > 0.15f);
-        if (Phase2StageTime > 0.8f && bPhase2Roll && FMath::Abs(ToolRoll) < 2.0f && FMath::Abs(GetRollDeg()) < 2.0f)
-            Phase2Dwell += DeltaSeconds;
-        else Phase2Dwell = 0.0f;
-        bPhase2RollReturned |= Phase2Dwell >= 0.25f;
-        if (bPhase2RollReturned || Phase2TimedOut(5.0f, TEXT("E rotation and Q return to actual zero roll"))) AdvancePhase2(2);
-        break;
-    case 2:
-        if (!bPhase2Contact) DrivePhase2To(FVector(0, -1.5, 0.70));
-        else { StopPhase2Motion(); Phase2Dwell += DeltaSeconds; }
-        if (Phase2Dwell > 0.8f || Phase2TimedOut(15.0f, TEXT("surface contact and positive load")))
-        { CapturePhase2(TEXT("phase2_01_surface_contact.png")); AdvancePhase2(3); }
-        break;
-    case 3:
-        if (DrivePhase2To(FVector(0, -1.5, 2.8)) && bPhase2ContactReleased) Phase2Dwell += DeltaSeconds;
-        else Phase2Dwell = 0.0f;
-        if (Phase2Dwell > 0.5f || Phase2TimedOut(15.0f, TEXT("surface withdrawal and zero contact"))) AdvancePhase2(4);
-        break;
-    case 4:
-        SetPhase2Key(EKeys::Two, Phase2StageTime < 0.15f);
-        if ((Phase2StageTime > 1.1f && FVector::Distance(RenderedTip, FVector(0, -4.6, 0.6)) < 0.12 &&
-            FMath::Abs(GetRollDeg() - 90.0f) < 3.0f && Bridge->HasAcknowledgedReset()) ||
-            Phase2TimedOut(10.0f, TEXT("preset 2 acknowledged at actual edge approach pose")))
-        {
-            bPhase2Preset2 = ResetCount >= 2 && ActivePreset == 2 && FMath::Abs(GetRollDeg() - 90.0f) < 3.0f &&
-                FVector::Distance(RenderedTip, FVector(0, -4.6, 0.6)) < 0.12 && Bridge->HasAcknowledgedReset();
-            CapturePhase2(TEXT("phase2_02_edge_approach.png"));
-            AdvancePhase2(5);
-        }
-        break;
-    case 5:
-        if (DrivePhase2To(FVector(0, -3.7, 0.6))) Phase2Dwell += DeltaSeconds;
-        else Phase2Dwell = 0.0f;
-        if (Phase2Dwell > 1.0f || Phase2TimedOut(18.0f, TEXT("actual open jaws inserted at tissue front edge"))) AdvancePhase2(6);
-        break;
-    case 6:
-        SetPhase2Key(EKeys::SpaceBar, true);
-        if (IsGraspActive()) Phase2Dwell += DeltaSeconds;
-        else Phase2Dwell = 0.0f;
-        if (Phase2Dwell > 0.8f || Phase2TimedOut(12.0f, TEXT("continuous bilateral contact grasp")))
-        {
-            CapturePhase2(bPhase2RepeatGrasp ? TEXT("phase2_03b_regrasp.png") : TEXT("phase2_03_contact_grasp.png"));
-            if (bPhase2RepeatGrasp) AdvancePhase2(7);
-            else
-            {
-                bPhase2ReleaseStartedHolding = IsGraspActive() && bJawClosed;
-                if (!bPhase2ReleaseStartedHolding) Phase2Failures.AddUnique(TEXT("Explicit Space-release subtest did not start while holding tissue"));
-                AdvancePhase2(12);
-            }
-        }
-        break;
-    case 7:
-    {
-        const bool bAtLift = DrivePhase2To(FVector(0.3, -3.8, 1.4));
-        if (bAtLift && RenderedTip.Z >= 1.32 && IsGraspActive() && Bridge->GetMaxDisplacementCm() * 10.0f > 0.5f)
-        {
-            Phase2ContinuousHold += DeltaSeconds;
-            if (bNewPhysicsFrame) ++Phase2HoldFrames;
-            Phase2LongestHold = FMath::Max(Phase2LongestHold, Phase2ContinuousHold);
-        }
-        else { Phase2ContinuousHold = 0.0f; Phase2HoldFrames = 0; }
-        bPhase2TractionHeld |= Phase2ContinuousHold >= 0.35f && Phase2HoldFrames >= 8;
-        if ((bAtLift && bPhase2TractionHeld && Phase2ContinuousHold >= 0.5f) ||
-            Phase2TimedOut(20.0f, TEXT("actual lift with continuous holding for at least 0.35 seconds")))
-        { CapturePhase2(TEXT("phase2_04_traction.png")); AdvancePhase2(8); }
-        break;
-    }
-    case 8:
-        if (DrivePhase2To(FVector(0.5, -4.0, 2.2))) Phase2Dwell += DeltaSeconds;
-        else Phase2Dwell = 0.0f;
-        if ((Phase2Dwell > 1.8f && bPhase2Slip && !IsGraspActive()) || Phase2TimedOut(20.0f, TEXT("larger traction causes frictional slip and release")))
-        { CapturePhase2(TEXT("phase2_05_frictional_slip.png")); AdvancePhase2(9); }
-        break;
-    case 9:
-        SetPhase2Key(EKeys::SpaceBar, false);
-        if ((Phase2StageTime > 2.6f && bPhase2Released) || Phase2TimedOut(10.0f, TEXT("jaws reopen after frictional slip")))
-        { CapturePhase2(TEXT("phase2_06_release.png")); AdvancePhase2(10); }
-        break;
-    case 10:
-        SetPhase2Key(EKeys::LeftShift, true);
-        SetPhase2Key(EKeys::G, true);
-        if ((bPhase2Limit && Phase2StageTime > 0.5f) || Phase2TimedOut(5.0f, TEXT("normal insertion input reaches RCM travel limit")))
-        { CapturePhase2(TEXT("phase2_07_rcm_limit.png")); AdvancePhase2(11); }
-        break;
-    case 11:
-        SetPhase2Key(EKeys::R, Phase2StageTime < 0.15f);
-        // Three real Tab presses switch from the endoscope to the detailed jaw view.
-        SetPhase2Key(EKeys::Tab, (Phase2StageTime > 0.7f && Phase2StageTime < 0.85f) ||
-            (Phase2StageTime > 1.0f && Phase2StageTime < 1.15f) ||
-            (Phase2StageTime > 1.3f && Phase2StageTime < 1.45f));
-        if (Phase2StageTime > 2.2f && !(Phase2StageMask & 1u))
-        { Phase2StageMask |= 1u; CapturePhase2(TEXT("phase2_08_jaw_detail.png")); }
-        if (Phase2StageTime > 3.0f && Bridge->HasAcknowledgedReset() &&
-            FVector::Distance(RenderedTip, FVector(0, 0, 2.2)) < 0.06 && Bridge->GetMaxDisplacementCm() * 10.0f < 0.2f)
-            FinishPhase2Test();
-        else if (Phase2TimedOut(12.0f, TEXT("R reset acknowledged, actual tool home and tissue recovery below 0.2 mm"))) FinishPhase2Test();
-        break;
-    case 12:
-        // Entered while the first grasp is still active: this proves release caused by opening,
-        // independently of the later traction/slip release scenario.
-        SetPhase2Key(EKeys::SpaceBar, false);
-        if (bPhase2ReleaseStartedHolding && !bJawClosed && !IsGraspActive() && JawOpenBlend > 0.9f && bNewPhysicsFrame)
-            bPhase2ReleasedByOpening = true;
-        if ((Phase2StageTime > 2.6f && bPhase2ReleasedByOpening) ||
-            Phase2TimedOut(10.0f, TEXT("Space release opens previously holding jaws and releases tissue")))
-        { CapturePhase2(TEXT("phase2_03a_space_release.png")); AdvancePhase2(13); }
-        break;
-    case 13:
-        SetPhase2Key(EKeys::Two, Phase2StageTime < 0.15f);
-        if ((Phase2StageTime > 1.1f && ResetCount >= 3 && Bridge->HasAcknowledgedReset() &&
-            FVector::Distance(RenderedTip, FVector(0, -4.6, 0.6)) < 0.12 && FMath::Abs(GetRollDeg() - 90.0f) < 3.0f) ||
-            Phase2TimedOut(10.0f, TEXT("second preset 2 reset before independent traction scenario")))
-        { bPhase2RepeatGrasp = true; AdvancePhase2(5); }
-        break;
-    default: FinishPhase2Test(TEXT("Invalid acceptance stage")); break;
-    }
-}
-
-void ATrainingScene::FinishPhase2Test(const FString& Failure)
-{
-    if (bPhase2Finished) return;
-    bPhase2Finished = true;
-    const TArray<FName> Held = Phase2HeldKeys.Array();
-    for (const FName& Name : Held) SetPhase2Key(FKey(Name), false);
-    double EnvelopeExcessMm = 0.0;
-    int32 JawVertexCount = 0;
-    for (UProceduralMeshComponent* Jaw : { JawLeft.Get(), JawRight.Get() })
-    {
-        if (!Jaw) continue;
-        if (const FProcMeshSection* Section = Jaw->GetProcMeshSection(0))
-            for (const FProcMeshVertex& Vertex : Section->ProcVertexBuffer)
-            {
-                ++JawVertexCount;
-                const FVector V = FVector(Vertex.Position).GetAbs() - FVector(0.725, 0.125, 0.070);
-                EnvelopeExcessMm = FMath::Max(EnvelopeExcessMm, FMath::Max(0.0, V.GetMax()) * 10.0);
-            }
-    }
-    const bool bGeometry = JawVertexCount > 3000 && EnvelopeExcessMm < 0.001;
-    const bool bRenderBound = !TissueRenderBindings.IsEmpty() && LastPhysicsFrame != MAX_uint64 && Phase2MaxRenderOffsetMm <= 0.1001f;
-    const bool bReset = Bridge && Bridge->HasAcknowledgedReset() && ResetCount >= 4 && !IsGraspActive() &&
-        ToolTip.Equals(FVector(0, 0, 2.2), 0.06) && RenderedTip.Equals(FVector(0, 0, 2.2), 0.06) &&
-        Bridge->GetMaxDisplacementCm() * 10.0f < 0.2f;
-    const bool bHealthy = Bridge && Bridge->IsHealthy() && Bridge->GetUnhealthyStateCount() == 0 && Bridge->GetRejectedStateCount() == 0;
-    const bool bPenetration = Phase2MaxPenetrationMm < 1.0f;
-    if (!Failure.IsEmpty()) Phase2Failures.AddUnique(Failure);
-    TSharedRef<FJsonObject> Report = MakeShared<FJsonObject>();
-    Report->SetNumberField(TEXT("phase"), 2);
-    Report->SetNumberField(TEXT("report_version"), 2);
-    Report->SetStringField(TEXT("input_path"), TEXT("PlayerController InputKey -> regular UpdateInput; closed-loop Ctrl/arrow/W/S key control, no direct test writes to ToolTip"));
-    Report->SetStringField(TEXT("scope"), TEXT("Software input, SOFA jaw contact/friction, mesh binding and presentation regression; not clinical validation or full-shaft collision validation"));
-    auto Check = [&](const TCHAR* Name, bool bOK, const TCHAR* Reason)
-    {
-        Report->SetBoolField(Name, bOK);
-        if (!bOK) Phase2Failures.AddUnique(Reason);
-    };
-    Check(TEXT("physics_connected"), IsPhysicsConnected(), TEXT("Physics is disconnected at test completion"));
-    Check(TEXT("healthy_without_rejected_states"), bHealthy, TEXT("Physics health or protocol validation failed"));
-    Check(TEXT("surface_contact_detected"), bPhase2Contact, TEXT("Surface contact with positive load was not observed"));
-    Check(TEXT("surface_contact_released"), bPhase2ContactReleased, TEXT("Surface contact did not clear after withdrawal"));
-    Check(TEXT("bilateral_grasp_observed"), bPhase2Grasp, TEXT("Bilateral grasp was not observed"));
-    Check(TEXT("traction_held_at_lift"), bPhase2TractionHeld, TEXT("Actual raised tool did not continuously hold tissue for at least 0.35 seconds and eight physics states"));
-    Check(TEXT("frictional_slip_observed"), bPhase2Slip, TEXT("Larger traction did not cause observed frictional slip and loss of grasp"));
-    Check(TEXT("opening_confirmed_ungrasped"), bPhase2Released, TEXT("Final opening after slip was not confirmed"));
-    Check(TEXT("space_opening_released_held_tissue"), bPhase2ReleaseStartedHolding && bPhase2ReleasedByOpening,
-        TEXT("Opening jaws with Space release did not transition from a confirmed holding state to release"));
-    Check(TEXT("q_e_roll_input"), bPhase2Roll && bPhase2RollReturned, TEXT("E rotation and Q return to actual zero roll were not both observed"));
-    Check(TEXT("preset_1_key"), bPhase2Preset1, TEXT("Preset 1 key did not reach its acknowledged actual pose"));
-    Check(TEXT("preset_2_key_and_90deg_roll"), bPhase2Preset2, TEXT("Preset 2 key did not reach its acknowledged edge pose and roll"));
-    Check(TEXT("rcm_travel_limit"), bPhase2Limit, TEXT("Normal input did not reach an RCM travel limit"));
-    Check(TEXT("r_key_reset"), bReset, TEXT("R reset was not acknowledged at actual home pose with tissue displacement below 0.2 mm"));
-    Check(TEXT("tab_detail_view"), ViewMode == 3, TEXT("Three Tab inputs did not select jaw detail view"));
-    Check(TEXT("jaw_geometry_inside_collision_envelope"), bGeometry, TEXT("Detailed jaw geometry exceeds its collision envelope or is missing"));
-    Check(TEXT("render_surface_within_0_1mm"), bRenderBound, TEXT("Rendered tissue is missing or exceeds its 0.1 mm physical surface offset bound"));
-    Check(TEXT("sampled_penetration_under_1mm"), bPenetration, TEXT("Normal interaction sampled residual penetration reached or exceeded 1.0 mm"));
-    Check(TEXT("positive_contact_load_and_tissue_motion"), Phase2PeakGripN > 0.01f && Phase2MaxTissueMm > 0.5f,
-        TEXT("Contact load or physical tissue displacement remained below the required minimum"));
-    Report->SetNumberField(TEXT("peak_contact_force_n"), Phase2PeakContactN);
-    Report->SetNumberField(TEXT("peak_grip_force_n"), Phase2PeakGripN);
-    Report->SetNumberField(TEXT("max_reported_penetration_mm"), Phase2MaxPenetrationMm);
-    Report->SetNumberField(TEXT("max_slip_distance_mm"), Phase2MaxSlipMm);
-    Report->SetNumberField(TEXT("max_tissue_displacement_mm"), Phase2MaxTissueMm);
-    Report->SetNumberField(TEXT("max_render_surface_offset_mm"), Phase2MaxRenderOffsetMm);
-    Report->SetNumberField(TEXT("longest_continuous_hold_at_lift_s"), Phase2LongestHold);
-    Report->SetNumberField(TEXT("penetration_limit_mm"), 1.0);
-    Report->SetNumberField(TEXT("unhealthy_state_count"), Bridge ? Bridge->GetUnhealthyStateCount() : 0);
-    Report->SetNumberField(TEXT("rejected_state_count"), Bridge ? Bridge->GetRejectedStateCount() : 0);
-    Report->SetNumberField(TEXT("reset_final_displacement_mm"), Bridge ? Bridge->GetMaxDisplacementCm() * 10.0f : -1.0f);
-    Report->SetNumberField(TEXT("jaw_vertex_count"), JawVertexCount);
-    Report->SetNumberField(TEXT("jaw_envelope_excess_mm"), EnvelopeExcessMm);
-    Report->SetNumberField(TEXT("physics_nodes"), GetPhysicsNodeCount());
-    Report->SetNumberField(TEXT("render_vertices"), GetVertexCount());
-    TArray<TSharedPtr<FJsonValue>> Failures;
-    for (const FString& Reason : Phase2Failures) Failures.Add(MakeShared<FJsonValueString>(Reason));
-    Report->SetArrayField(TEXT("failures"), Failures);
-    Report->SetStringField(TEXT("failure"), FString::Join(Phase2Failures, TEXT("; ")));
-    const bool bPassed = Phase2Failures.IsEmpty();
-    Report->SetBoolField(TEXT("passed"), bPassed);
-    FString Json;
-    const auto Writer = TJsonWriterFactory<>::Create(&Json);
-    FJsonSerializer::Serialize(Report, Writer);
-    const FString Path = FPaths::Combine(CaptureDirectory, TEXT("phase2-input-test.json"));
-    const bool bSaved = FFileHelper::SaveStringToFile(Json, *Path, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    UE_LOG(LogTemp, Display, TEXT("LAP_PHASE2_TEST complete passed=%d saved=%d path=%s"), bPassed, bSaved, *Path);
-    if (bAutoExit) FPlatformMisc::RequestExit(false);
-}
-
-void ATrainingScene::FinishKeyTest(const FString& Failure)
-{
-    if (bKeyTestFinished) return;
-    bKeyTestFinished = true;
-    const bool bLowered = KeyTestMinHeight < 1.5f;
-    const bool bRaised = KeyTestMaxHeldHeight > 2.5f;
-    const bool bForce = KeyTestPeakForce > 0.01f;
-    const bool bReset = ResetCount >= 1 && ToolTip.Equals(FVector(0, 0, 2.2), 0.05) && !IsGraspActive();
-    const bool bView = ViewMode == 1;
-    const bool bPassed = Failure.IsEmpty() && IsPhysicsConnected() && bLowered && bKeyTestCaptured &&
-        bRaised && bForce && bKeyTestReleased && bReset && bView;
-    TSharedRef<FJsonObject> Report = MakeShared<FJsonObject>();
-    Report->SetBoolField(TEXT("passed"), bPassed);
-    Report->SetStringField(TEXT("method"), TEXT("PlayerController InputKey events consumed by normal UpdateInput; no direct tip-position writes"));
-    Report->SetStringField(TEXT("scope"), TEXT("UE keyboard polling and SOFA integration regression; does not test physical mouse hardware or clinical validity"));
-    Report->SetStringField(TEXT("failure"), Failure);
-    Report->SetBoolField(TEXT("physics_connected"), IsPhysicsConnected());
-    Report->SetBoolField(TEXT("s_key_lowered_tip"), bLowered);
-    Report->SetBoolField(TEXT("space_key_captured_tissue"), bKeyTestCaptured);
-    Report->SetBoolField(TEXT("w_key_raised_held_tissue"), bRaised);
-    Report->SetBoolField(TEXT("traction_generated_force"), bForce);
-    Report->SetBoolField(TEXT("space_release_released_tissue"), bKeyTestReleased);
-    Report->SetBoolField(TEXT("r_key_reset"), bReset);
-    Report->SetBoolField(TEXT("tab_key_changed_view"), bView);
-    Report->SetNumberField(TEXT("min_tip_height_cm"), KeyTestMinHeight);
-    Report->SetNumberField(TEXT("max_held_tip_height_cm"), KeyTestMaxHeldHeight);
-    Report->SetNumberField(TEXT("peak_force_n"), KeyTestPeakForce);
-    Report->SetNumberField(TEXT("reset_count"), ResetCount);
-    Report->SetNumberField(TEXT("view_mode"), ViewMode);
-    FString Json;
-    const auto Writer = TJsonWriterFactory<>::Create(&Json);
-    FJsonSerializer::Serialize(Report, Writer);
-    const FString Path = FPaths::Combine(CaptureDirectory, TEXT("key-input-test.json"));
-    const bool bSaved = FFileHelper::SaveStringToFile(Json, *Path, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    UE_LOG(LogTemp, Display, TEXT("LAP_KEYTEST complete passed=%d saved=%d path=%s"), bPassed, bSaved, *Path);
-    if (bAutoExit) FPlatformMisc::RequestExit(false);
-}
-
 void ATrainingScene::UpdateTissueSurface()
 {
-    if (TissueVertices.Num() < 3 || TissueTriangles.Num() < 3) return;
-    TissueNormals.Init(FVector::ZeroVector, TissueVertices.Num());
-    for (int32 I = 0; I + 2 < TissueTriangles.Num(); I += 3)
+    if (TissueVertices.Num()<3 || TissueTriangles.Num()<3) return;
+    TissueNormals.Init(FVector::ZeroVector,TissueVertices.Num());
+    for (int32 I=0;I+2<TissueTriangles.Num();I+=3)
     {
-        const int32 A = TissueTriangles[I], B = TissueTriangles[I + 1], C = TissueTriangles[I + 2];
-        if (!TissueVertices.IsValidIndex(A) || !TissueVertices.IsValidIndex(B) || !TissueVertices.IsValidIndex(C)) continue;
-        const FVector N = FVector::CrossProduct(TissueVertices[B] - TissueVertices[A], TissueVertices[C] - TissueVertices[A]);
-        TissueNormals[A] += N;
-        TissueNormals[B] += N;
-        TissueNormals[C] += N;
+        const int32 A=TissueTriangles[I],B=TissueTriangles[I+1],C=TissueTriangles[I+2];
+        if (!TissueVertices.IsValidIndex(A)||!TissueVertices.IsValidIndex(B)||!TissueVertices.IsValidIndex(C)) continue;
+        const FVector N=FVector::CrossProduct(TissueVertices[B]-TissueVertices[A],TissueVertices[C]-TissueVertices[A]);
+        TissueNormals[A]+=N; TissueNormals[B]+=N; TissueNormals[C]+=N;
     }
-    for (FVector& N : TissueNormals) N = N.GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
-    const bool bRebuild = !bHasSurface || BoundNodeCount != TissueVertices.Num() || BoundFaceCount != TissueTriangles.Num();
-    if (bRebuild)
+    for (FVector& N:TissueNormals) N=N.GetSafeNormal(UE_SMALL_NUMBER,FVector::UpVector);
+    const int32 Topology=Bridge ? Bridge->GetTopologyRevision() : 0;
+    const bool Rebuild=!bHasSurface || BoundNodeCount!=TissueVertices.Num() ||
+        BoundFaceCount!=TissueTriangles.Num() || BoundTopologyRevision!=Topology;
+    if (Rebuild)
     {
-        BoundNodeCount = TissueVertices.Num();
-        BoundFaceCount = TissueTriangles.Num();
-        TrainingGeometry::BuildSurfaceBindings(TissueVertices, TissueTriangles, 3, TissueRenderBindings, TissueRenderData);
+        BoundNodeCount=TissueVertices.Num(); BoundFaceCount=TissueTriangles.Num(); BoundTopologyRevision=Topology;
+        TrainingGeometry::BuildSurfaceBindings(TissueVertices,TissueTriangles,3,TissueRenderBindings,TissueRenderData);
+        // The native tetrahedral layer supplies its complete physical boundary, including
+        // lower faces and new cut walls. No invented caps or duplicate reverse faces are added.
     }
-    // PN interpolation removes coarse shading/facet artefacts while every sample stays bound to
-    // the same SOFA face; displacement from that physical face is explicitly capped at 0.1 mm.
-    TrainingGeometry::UpdateBoundSurface(TissueVertices, TissueNormals, TissueRenderBindings, TissueRenderData, 0.01);
-    if (bPhase2Test)
-        for (int32 I = 0; I < TissueRenderBindings.Num(); ++I)
+    // Linear barycentric binding: exact physical triangles, no cross-cut interpolation or offset.
+    TrainingGeometry::UpdateBoundSurface(TissueVertices,TissueNormals,TissueRenderBindings,TissueRenderData,0.0);
+    if (bPhase3Test)
+        for(int32 I=0;I<TissueRenderBindings.Num();++I)
         {
-            const FTrainingSurfaceSample& S = TissueRenderBindings[I];
-            const FVector Linear = TissueVertices[S.A] * S.Weight.X + TissueVertices[S.B] * S.Weight.Y + TissueVertices[S.C] * S.Weight.Z;
-            Phase2MaxRenderOffsetMm = FMath::Max(Phase2MaxRenderOffsetMm,
-                static_cast<float>(FVector::Distance(Linear, TissueRenderData.Positions[I]) * 10.0));
+            const auto& S=TissueRenderBindings[I];
+            const FVector P=TissueVertices[S.A]*S.Weight.X+TissueVertices[S.B]*S.Weight.Y+TissueVertices[S.C]*S.Weight.Z;
+            TestMaxRenderOffsetMm=FMath::Max(TestMaxRenderOffsetMm,static_cast<float>(FVector::Distance(P,TissueRenderData.Positions[I])*10));
         }
-    if (bRebuild)
-    {
-        TissueMesh->CreateMeshSection_LinearColor(0, TissueRenderData.Positions, TissueRenderData.Triangles,
-            TissueRenderData.Normals, TissueRenderData.UV, TissueRenderData.Colors, TissueRenderData.Tangents, false);
-        bHasSurface = true;
-    }
-    else
-    {
-        TissueMesh->UpdateMeshSection_LinearColor(0, TissueRenderData.Positions, TissueRenderData.Normals,
-            TissueRenderData.UV, TissueRenderData.Colors, TissueRenderData.Tangents);
-    }
+    if (Rebuild)
+        TissueMesh->CreateMeshSection_LinearColor(0,TissueRenderData.Positions,TissueRenderData.Triangles,TissueRenderData.Normals,
+            TissueRenderData.UV,TissueRenderData.Colors,TissueRenderData.Tangents,false);
+    else TissueMesh->UpdateMeshSection_LinearColor(0,TissueRenderData.Positions,TissueRenderData.Normals,
+        TissueRenderData.UV,TissueRenderData.Colors,TissueRenderData.Tangents);
+    bHasSurface=true;
 }
-
 void ATrainingScene::UpdateSimulation(float DeltaSeconds)
 {
-    if (bVisualPreview || !Bridge) return;
-    Bridge->TickBridge(DeltaSeconds, ToolTip, bJawClosed, bResetRequested, ToolRoll);
-    bResetRequested = false;
-    if (!Bridge->IsConnected()) return;
-    SimulationElapsed += DeltaSeconds;
-    const uint64 Frame = Bridge->GetFrameNumber();
-    if (Frame == LastPhysicsFrame) return;
-    if (Bridge->GetSurface(TissueVertices, TissueTriangles))
+    if(bVisualPreview || !Bridge) return;
+    if(bWasPhysicsConnected && !Bridge->IsConnected())
     {
-        LastPhysicsFrame = Frame;
-        UpdateTissueSurface();
+        bGrasperLatched=false; bJawClosed=false; ToolClosed[0]=ToolClosed[1]=false;
+        bSuppressSpace=true;
     }
+    TArray<FLapToolCommand> Commands;
+    for(int32 T=0;T<2;++T) { FLapToolCommand C; C.TipCm=ToolTips[T]; C.bClosed=ToolClosed[T]; C.RollDeg=ToolRolls[T]; Commands.Add(C); }
+    Bridge->TickDualBridge(DeltaSeconds,Commands,ActiveTool,bResetRequested); bResetRequested=false;
+    const uint64 SafetyStops=Bridge->GetSafetyStopCount();
+    if(SafetyStops>LastSafetyStopCount)
+    {
+        bGrasperLatched=false; bJawClosed=false; ToolClosed[0]=ToolClosed[1]=false;
+        bSuppressSpace=true; bProtectionNotice=true; bProtectionHasOpened=false;
+    }
+    LastSafetyStopCount=SafetyStops;
+    if(bProtectionNotice)
+    {
+        const FLapToolState* A=Bridge->GetToolState(0); const FLapToolState* B=Bridge->GetToolState(1);
+        if(A && B && A->JawOpenFraction>.90f && B->JawOpenFraction>.90f) bProtectionHasOpened=true;
+    }
+    if(!bWasPhysicsConnected && Bridge->IsConnected()) bSuppressSpace=true;
+    if(bWasPhysicsConnected && !Bridge->IsConnected())
+    {
+        bGrasperLatched=false; bJawClosed=false; ToolClosed[0]=ToolClosed[1]=false;
+        bSuppressSpace=true;
+    }
+    bWasPhysicsConnected=Bridge->IsConnected();
+    if(!Bridge->IsConnected()) return;
+    SimulationElapsed+=DeltaSeconds;
+    const uint64 Frame=Bridge->GetFrameNumber();
+    if(Frame!=LastPhysicsFrame && Bridge->GetSurface(TissueVertices,TissueTriangles))
+    { LastPhysicsFrame=Frame; UpdateTissueSurface(); }
 }
-
 void ATrainingScene::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-    if (DeltaSeconds > 0.0001f) SmoothedFps = FMath::FInterpTo(SmoothedFps, 1.0f / DeltaSeconds, DeltaSeconds, 2.0f);
-    UpdateKeyTest(DeltaSeconds);
-    UpdatePhase2Test(DeltaSeconds);
-    UpdateInput(DeltaSeconds);
-    ApplyWorkspaceLimits();
-    UpdateSimulation(DeltaSeconds);
-    UpdateInstrument(DeltaSeconds);
-    if (ViewMode == 3) UpdateCamera();
-    UpdateVisualPreview(DeltaSeconds);
+    if(DeltaSeconds>.0001f) SmoothedFps=FMath::FInterpTo(SmoothedFps,1.0f/DeltaSeconds,DeltaSeconds,2.0f);
+    UpdatePhase3Test(DeltaSeconds);
+    UpdateInput(DeltaSeconds); ApplyWorkspaceLimits(); UpdateSimulation(DeltaSeconds); UpdateInstrument(DeltaSeconds);
+    if(ViewMode==3) UpdateCamera();
 }
-
 bool ATrainingScene::IsPhysicsConnected() const { return Bridge && Bridge->IsConnected(); }
-bool ATrainingScene::IsGraspActive() const { return Bridge && Bridge->IsGraspActive(); }
-FString ATrainingScene::GetPhysicsStatus() const { return Bridge ? Bridge->GetStatusText() : TEXT("Initializing SOFA bridge"); }
-float ATrainingScene::GetForceNewton() const { return Bridge ? Bridge->GetForceNewton() : 0.0f; }
-float ATrainingScene::GetSolveTimeMs() const { return Bridge ? Bridge->GetPhysicsStepMs() : 0.0f; }
-float ATrainingScene::GetSimulationTime() const { return SimulationElapsed; }
-FString ATrainingScene::GetViewName() const { return ViewMode == 1 ? TEXT("OVERVIEW") : ViewMode == 2 ? TEXT("SIDE INSPECTION") : ViewMode == 3 ? TEXT("JAW DETAIL") : TEXT("ENDOSCOPE"); }
-int32 ATrainingScene::GetPhysicsNodeCount() const { return Bridge && Bridge->IsConnected() ? Bridge->GetPhysicsNodeCount() : 0; }
-int32 ATrainingScene::GetContactCount() const { return Bridge && Bridge->IsConnected() ? Bridge->GetContactCount() : 0; }
-float ATrainingScene::GetContactForceNewton() const { return Bridge ? Bridge->GetContactForceNewton() : 0.0f; }
-float ATrainingScene::GetPenetrationMm() const { return Bridge ? Bridge->GetPenetrationMm() : 0.0f; }
-float ATrainingScene::GetSlipDistanceMm() const { return Bridge ? Bridge->GetSlipDistanceMm() : 0.0f; }
-float ATrainingScene::GetInsertionCm() const { return FVector::Distance(RenderedTip, FVector(12, -14, 15)); }
+bool ATrainingScene::IsPhysicsHealthy() const { return Bridge && Bridge->IsHealthy(); }
+bool ATrainingScene::IsGraspActive() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return IsPhysicsConnected() && S && S->bGrasping; }
+bool ATrainingScene::IsGrasperHolding() const { const auto* S=Bridge ? Bridge->GetToolState(0):nullptr; return IsPhysicsConnected() && S && S->bGrasping; }
+FString ATrainingScene::GetPhysicsStatus() const { return Bridge ? Bridge->GetStatusText():TEXT("Initializing SOFA bridge"); }
+float ATrainingScene::GetForceNewton() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->ForceNewton:0; }
+float ATrainingScene::GetSolveTimeMs() const { return Bridge ? Bridge->GetPhysicsStepMs():0; }
+FString ATrainingScene::GetViewName() const { return ViewMode==1 ? TEXT("OVERVIEW"):ViewMode==2 ? TEXT("SIDE INSPECTION"):ViewMode==3 ? TEXT("JAW DETAIL"):TEXT("ENDOSCOPE"); }
+int32 ATrainingScene::GetPhysicsNodeCount() const { return Bridge ? Bridge->GetPhysicsNodeCount():0; }
+int32 ATrainingScene::GetContactCount() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->ContactCount:0; }
+float ATrainingScene::GetContactForceNewton() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->ContactForceNewton:0; }
+float ATrainingScene::GetPenetrationMm() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->PenetrationMm:0; }
+float ATrainingScene::GetSlipDistanceMm() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->SlipDistanceMm:0; }
+float ATrainingScene::GetInsertionCm() const { return FVector::Distance(RenderedTip,GetPivot(ActiveTool)); }
 float ATrainingScene::GetSwingAngleDeg() const
 {
-    const FVector Pivot(12, -14, 15);
-    return FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(FVector::DotProduct((RenderedTip - Pivot).GetSafeNormal(),
-        (FVector(0, 0, 1.2) - Pivot).GetSafeNormal()), -1.0, 1.0)));
+    const FVector P=GetPivot(ActiveTool);
+    return FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(FVector::DotProduct((RenderedTip-P).GetSafeNormal(),(FVector(0,0,.6)-P).GetSafeNormal()),-1.0,1.0)));
 }
-float ATrainingScene::GetRollDeg() const { return Bridge && Bridge->HasToolState() ? Bridge->GetActualRollDeg() : ToolRoll; }
-float ATrainingScene::GetJawAngleDeg() const { return FMath::Lerp(2.0f, 40.0f, JawOpenBlend); }
-FString ATrainingScene::GetGripState() const { return Bridge ? Bridge->GetGripState() : TEXT("open"); }
-bool ATrainingScene::IsSlipping() const { return GetGripState().Contains(TEXT("slip"), ESearchCase::IgnoreCase) || GetGripState().Contains(TEXT("slid"), ESearchCase::IgnoreCase); }
+float ATrainingScene::GetRollDeg() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->RollDeg:ToolRoll; }
+float ATrainingScene::GetJawAngleDeg() const { return 40.0f*JawOpenBlend; }
+int32 ATrainingScene::GetCutCount() const { return Bridge ? Bridge->GetCutCount():0; }
+int32 ATrainingScene::GetComponentCount() const { return Bridge ? Bridge->GetComponentCount():1; }
+float ATrainingScene::GetCutLengthCm() const { return Bridge ? Bridge->GetCutLengthCm():0; }
+FString ATrainingScene::GetGripState() const { const auto* S=Bridge ? Bridge->GetToolState(ActiveTool):nullptr; return S ? S->GripState:TEXT("open"); }
+bool ATrainingScene::IsSlipping() const { return GetGripState().Contains(TEXT("slip"),ESearchCase::IgnoreCase); }
 FString ATrainingScene::GetActionHint() const
 {
-    if (IsMotionLimited()) return TEXT("Travel limit reached. Retract or reduce the pivot angle.");
-    if (IsSlipping()) return TEXT("Tissue is sliding between the jaws. Reduce traction.");
-    if (IsGraspActive()) return TEXT("Contact grip engaged. Raise gently with W; release SPACE to open.");
-    if (GetContactCount() > 0 && !bJawClosed) return TEXT("Jaw contact detected. Hold SPACE to close when tissue is between the jaws.");
-    if (bJawClosed && GetContactCount() > 0) return TEXT("Contact without a secure grip. Open and reposition around the tissue edge.");
-    if (bJawClosed) return TEXT("No tissue held. Open the jaws and place tissue between both pads.");
-    if (ActivePreset == 2) return TEXT("Edge approach: roll is 90 deg. Move to the edge, then hold SPACE.");
-    return TEXT("Surface approach: lower gently with S. Press 2 for edge grasping.");
+    if(IsPhysicsConnected() && !IsPhysicsHealthy()) return TEXT("Physics stopped. Last valid tool poses are frozen. Press R to reset.");
+    if(bMouseReleased) return TEXT("Both instruments released. Right-click to resume.");
+    if(bProtectionNotice) return TEXT("Protection released tools. Release SPACE, reposition and regrip; R resets. See physics status at right.");
+    if(IsMotionLimited()) return TEXT("RCM travel limit reached. Retract or reduce the pivot angle.");
+    if(ActiveTool==1) return TEXT("Hold SPACE until the cut; release to reopen. Lift clear before the next bite. C returns to grasper.");
+    if(IsSlipping()) return TEXT("Tissue is sliding. Reduce traction or open and reposition.");
+    if(IsGrasperHolding()) return TEXT("Raise gently with W. F latches the grasper so C can select scissors while holding.");
+    return TEXT("2: ready position. F: latch grasper on tissue. W: traction. C: scissors. 1 / R: reset.");
+}
+
+void ATrainingScene::SetTestKey(const FKey& Key,bool bDown)
+{
+    const FName Name=Key.GetFName(); if(TestHeldKeys.Contains(Name)==bDown) return;
+    APlayerController* PC=UGameplayStatics::GetPlayerController(this,0); if(!PC) return;
+    if(bDown) TestHeldKeys.Add(Name); else TestHeldKeys.Remove(Name);
+    PC->InputKey(FInputKeyEventArgs(nullptr,FInputDeviceId::CreateFromInternalId(0),Key,
+        bDown?IE_Pressed:IE_Released,bDown?1.0f:0.0f,false,FPlatformTime::Cycles64()));
+    UE_LOG(LogTemp,Display,TEXT("LAP_PHASE3_KEY stage=%d key=%s down=%d active=%d"),TestStage,*Key.ToString(),bDown,ActiveTool);
+}
+void ATrainingScene::StopTestMotion()
+{
+    for(const FKey& K:{EKeys::W,EKeys::S,EKeys::Up,EKeys::Down,EKeys::Left,EKeys::Right,EKeys::T,EKeys::G,
+        EKeys::LeftControl,EKeys::LeftShift,EKeys::Q,EKeys::E}) SetTestKey(K,false);
+}
+bool ATrainingScene::DriveTestTo(const FVector& Target)
+{
+    const FVector Error=Target-ToolTip;
+    FVector Right=Camera->GetRightVector(); Right.Z=0; Right.Normalize();
+    FVector Up=Camera->GetUpVector(); Up.Z=0;
+    if(!Up.Normalize()) { Up=Camera->GetForwardVector(); Up.Z=0; Up.Normalize(); }
+    const double X=FVector::DotProduct(Error,Right),Y=FVector::DotProduct(Error,Up),Tol=.014;
+    SetTestKey(EKeys::LeftControl,true);
+    SetTestKey(EKeys::Right,X>Tol); SetTestKey(EKeys::Left,X<-Tol);
+    SetTestKey(EKeys::Up,Y>Tol); SetTestKey(EKeys::Down,Y<-Tol);
+    SetTestKey(EKeys::W,Error.Z>Tol); SetTestKey(EKeys::S,Error.Z<-Tol);
+    return Error.Size()<.045 && FVector::Distance(RenderedTip,Target)<.10;
+}
+bool ATrainingScene::SampleUpperVertex(double X,double Y,FVector& OutPosition) const
+{
+    // Native topology stores the complete upper layer before the lower layer.
+    // Follow the actual material point, including its deformed XY, within 10 mm.
+    double BestDistance=1.0;
+    bool Found=false;
+    for(int32 I=0;I<TissueVertices.Num()/2;++I)
+    {
+        const FVector& P=TissueVertices[I];
+        const double D=FMath::Square(P.X-X)+FMath::Square(P.Y-Y);
+        if(D<=BestDistance) { BestDistance=D; OutPosition=P; Found=true; }
+    }
+    return Found;
+}
+void ATrainingScene::AdvanceTest(int32 Stage)
+{
+    StopTestMotion(); SetTestKey(EKeys::C,false); SetTestKey(EKeys::F,false);
+    SetTestKey(EKeys::One,false); SetTestKey(EKeys::Two,false); SetTestKey(EKeys::R,false); SetTestKey(EKeys::Tab,false); SetTestKey(EKeys::H,false);
+    TestStage=Stage; TestStageTime=0; TestDwell=0; TestStageTicks=0; TestGripFrames=0;
+    if(Stage==4)
+    {
+        FVector P;
+        if(!SampleUpperVertex(4,-3.5,P))
+        {
+            FinishPhase3Test(TEXT("First scissor aim has no upper material point within 10 mm")); return;
+        }
+        TestBiteTarget=P-FVector(0,0,.2);
+    }
+    if(Stage==7)
+    {
+        // Overlapping, short bites extend the initial incision from right to left.
+        const double X=3.2-TestStroke*.8,Y=-2.9;
+        FVector P;
+        if(!SampleUpperVertex(X,Y,P))
+        {
+            FinishPhase3Test(TEXT("Next scissor aim has no upper material point within 10 mm")); return;
+        }
+        // This initial sample only plans clearance. Refresh at the end of translation,
+        // then freeze for descent, so tissue relaxation during travel cannot stale the aim.
+        TestBiteTarget=FVector(P.X,P.Y,FMath::Max(P.Z-.2,-.18));
+        double Highest=FMath::Max(RenderedTip.Z,P.Z);
+        for(const FVector& Vertex:TissueVertices) Highest=FMath::Max(Highest,Vertex.Z);
+        TestClearanceZ=static_cast<float>(Highest+1.2);
+        TestRetractTarget=FVector(ToolTip.X,ToolTip.Y,TestClearanceZ);
+        TestWaypointPhase=0;
+    }
+    UE_LOG(LogTemp,Display,TEXT("LAP_PHASE3_STAGE stage=%d stroke=%d held=%d cuts=%d pieces=%d tip=%s"),
+        TestStage,TestStroke,IsGrasperHolding(),GetCutCount(),GetComponentCount(),*RenderedTip.ToString());
+}
+bool ATrainingScene::TestTimedOut(float Seconds,const TCHAR* Action)
+{
+    if(TestStageTime<=Seconds) return false;
+    const FString Reason=FString::Printf(TEXT("Stage %d timed out: %s"),TestStage,Action);
+    TestFailures.AddUnique(Reason); UE_LOG(LogTemp,Error,TEXT("LAP_PHASE3_ASSERT %s"),*Reason); return true;
+}
+void ATrainingScene::CaptureTest(const TCHAR* Filename)
+{ FScreenshotRequest::RequestScreenshot(FPaths::Combine(CaptureDirectory,Filename),true,false); }
+void ATrainingScene::UpdatePhase3Test(float DeltaSeconds)
+{
+    if(!bPhase3Test || bTestFinished) return;
+    TestTime+=DeltaSeconds;
+    if(Bridge) TestPeakSafetyStops=FMath::Max(TestPeakSafetyStops,Bridge->GetSafetyStopCount());
+    if(Bridge && Bridge->GetUnhealthyStateCount()>0) TestFailures.AddUnique(TEXT("Native physics reported unhealthy history"));
+    if(Bridge && Bridge->GetRejectedStateCount()>0) TestFailures.AddUnique(TEXT("Malformed physics state rejected"));
+    if(!IsPhysicsConnected())
+    {
+        if(bTestStarted) TestFailures.AddUnique(TEXT("Physics became stale or disconnected during exercise"));
+        if(TestTime>35.0f) FinishPhase3Test(TEXT("Physics connection unavailable"));
+        return;
+    }
+    bTestStarted=true;
+    if(TestTime>660.0f) { FinishPhase3Test(TEXT("Overall exercise timeout")); return; }
+    if(!Bridge->IsHealthy()) { FinishPhase3Test(TEXT("Native physics is unhealthy")); return; }
+    TestStageTime+=DeltaSeconds;
+    ++TestStageTicks;
+    const bool NewFrame=TestObservedFrame!=Bridge->GetFrameNumber(); TestObservedFrame=Bridge->GetFrameNumber();
+    TestPeakDisplacementMm=FMath::Max(TestPeakDisplacementMm,Bridge->GetMaxDisplacementCm()*10);
+    TestPeakCuts=FMath::Max(TestPeakCuts,GetCutCount());
+    TestPeakComponents=FMath::Max(TestPeakComponents,GetComponentCount());
+    TestPeakTopology=FMath::Max(TestPeakTopology,static_cast<int32>(Bridge->GetTopologyRevision()));
+    const FLapToolState* Grasper=Bridge->GetToolState(0);
+    if(Grasper) TestPeakForceN=FMath::Max(TestPeakForceN,Grasper->ForceNewton);
+    TestPeakSafetyStops=FMath::Max(TestPeakSafetyStops,Bridge->GetSafetyStopCount());
+    if(TestPeakSafetyStops>0) { FinishPhase3Test(TEXT("Native protection stop occurred during regular exercise")); return; }
+    if(GetCutCount()>0 && BoundTopologyRevision==Bridge->GetTopologyRevision() && NewFrame) bTestTopologyRendered=true;
+    switch(TestStage)
+    {
+    case 0:
+        SetTestKey(EKeys::Two,TestStageTicks==1);
+        SetTestKey(EKeys::Tab,TestStageTicks==3);
+        SetTestKey(EKeys::H,TestStageTicks==5);
+        if(Bridge->HasAcknowledgedReset() &&
+            FVector::Distance(ActualTips[0],FVector(-2.2,-3.4,.45))<.02 && GetCutCount()==0 && ViewMode==1 && !bShowHelp)
+        { TestDwell+=DeltaSeconds; if(NewFrame) ++TestGripFrames; }
+        else { TestDwell=0; TestGripFrames=0; }
+        if(TestStageTime>.8f && TestDwell>=.25f && TestGripFrames>=4)
+        { CaptureTest(TEXT("phase3_01_ready.png")); AdvanceTest(1); }
+        else if(TestTimedOut(12,TEXT("preset 2 ready pose and reset acknowledgement"))) FinishPhase3Test();
+        break;
+    case 1:
+        SetTestKey(EKeys::F,TestStageTicks==1);
+        if(IsGrasperHolding())
+        {
+            TestDwell+=DeltaSeconds;
+            if(NewFrame) ++TestGripFrames;
+        }
+        else { TestDwell=0; TestGripFrames=0; }
+        if(TestDwell>.45f && TestGripFrames>=8) { bTestGrip=true; CaptureTest(TEXT("phase3_02_grasp.png")); AdvanceTest(2); }
+        else if(TestTimedOut(12,TEXT("contact-supported grasper latch"))) FinishPhase3Test();
+        break;
+    case 2:
+        if(DriveTestTo(FVector(-2.2,-3.4,.85)) && IsGrasperHolding() &&
+            Bridge->GetMaxDisplacementCm()>.2f) TestDwell+=DeltaSeconds; else TestDwell=0;
+        if(TestDwell>.6f)
+        {
+            bTestTension=true; TestParkedGrasper=ActualTips[0];
+            CaptureTest(TEXT("phase3_03_traction.png")); AdvanceTest(3);
+        }
+        else if(TestTimedOut(15,TEXT("latched grasper raises membrane by at least 2 mm"))) FinishPhase3Test();
+        break;
+    case 3:
+        SetTestKey(EKeys::C,TestStageTicks==1);
+        if(TestStageTime>.6f && ActiveTool==1 && IsGrasperHolding() && bGrasperLatched &&
+            FVector::Distance(ActualTips[0],TestParkedGrasper)<.08)
+        { bTestSwitchHeld=true; AdvanceTest(4); }
+        else if(TestTimedOut(6,TEXT("C switches to scissors while retaining grasper hold"))) FinishPhase3Test();
+        break;
+    case 4:
+        // Closures are deliberately driven through the normal Space input, never a cut command.
+        if(DriveTestTo(TestBiteTarget))
+        {
+            TestDwell+=DeltaSeconds;
+            bTestIndependentTool=FVector::Distance(ActualTips[0],TestParkedGrasper)<.08;
+        }
+        else TestDwell=0;
+        if(TestDwell>.5f)
+        { TestCutBaseline=GetCutCount(); TestTopologyBaseline=static_cast<int32>(Bridge->GetTopologyRevision()); AdvanceTest(5); }
+        else if(TestTimedOut(15,TEXT("independent scissors approach"))) FinishPhase3Test();
+        break;
+    case 5:
+        SetTestKey(EKeys::SpaceBar,true);
+        if(TestStageTime>1.5f && JawOpenBlend<=.45f)
+        {
+            bTestCut=GetCutCount()>TestCutBaseline && Bridge->GetTopologyRevision()>static_cast<uint64>(TestTopologyBaseline);
+            if(!bTestCut) TestFailures.AddUnique(TEXT("Scissor closure did not sever physical connectivity"));
+            if(!IsGrasperHolding()) TestFailures.AddUnique(TEXT("Grasper hold was lost during the first cut"));
+            CaptureTest(TEXT("phase3_04_cut.png")); TestCutBaseline=GetCutCount(); AdvanceTest(6);
+        }
+        else if(TestTimedOut(15,TEXT("scissors closure reaches cutting angle"))) FinishPhase3Test();
+        break;
+    case 6:
+        // Remaining closed and parked must not repeatedly re-cut; opening must not cut.
+        if(TestStageTime<.65f)
+        {
+            if(GetCutCount()!=TestCutBaseline) TestFailures.AddUnique(TEXT("Stationary closed scissors cut repeatedly"));
+        }
+        else SetTestKey(EKeys::SpaceBar,false);
+        if(TestStageTime>1.6f && JawOpenBlend>.90f)
+        {
+            bTestOpeningNoCut=GetCutCount()==TestCutBaseline;
+            TestStroke=0; AdvanceTest(7);
+        }
+        else if(TestTimedOut(12,TEXT("scissors reopen after first cut"))) FinishPhase3Test();
+        break;
+    case 7:
+    {
+        const FVector Target=TestWaypointPhase==0 ? TestRetractTarget : TestWaypointPhase==1 ?
+            FVector(TestBiteTarget.X,TestBiteTarget.Y,TestClearanceZ) : TestBiteTarget;
+        if(DriveTestTo(Target)) TestDwell+=DeltaSeconds; else TestDwell=0;
+        if(TestDwell>.3f)
+        {
+            StopTestMotion(); TestDwell=0;
+            if(TestWaypointPhase==1)
+            {
+                FVector P;
+                if(!SampleUpperVertex(3.2-TestStroke*.8,-2.9,P))
+                {
+                    FinishPhase3Test(TEXT("Refreshed scissor aim has no upper material point within 10 mm"));
+                    break;
+                }
+                TestBiteTarget=FVector(P.X,P.Y,FMath::Max(P.Z-.2,-.18));
+                ++TestWaypointPhase;
+            }
+            else if(TestWaypointPhase==0) ++TestWaypointPhase;
+            else AdvanceTest(8);
+        }
+        else if(TestTimedOut(40,TEXT("retract, translate above membrane, and approach next bite"))) FinishPhase3Test();
+        break;
+    }
+    case 8:
+        SetTestKey(EKeys::SpaceBar,true);
+        if(TestStageTime>1.35f && JawOpenBlend<=.45f) AdvanceTest(9);
+        else if(TestTimedOut(15,TEXT("next closure reaches cutting angle"))) FinishPhase3Test();
+        break;
+    case 9:
+        SetTestKey(EKeys::SpaceBar,false);
+        if(TestStageTime>.95f && JawOpenBlend>.90f)
+        {
+            ++TestStroke;
+            bTestContinuousCuts=GetCutCount()>TestCutBaseline;
+            // Finish once repeated physical cutting and separation are both demonstrated.
+            // Further fixed world-space targets can lie outside an already detached fragment.
+            if(TestStroke>=12 || (GetCutCount()>=2 && GetComponentCount()>1 && bTestContinuousCuts))
+            {
+                CaptureTest(TEXT("phase3_05_separation.png"));
+                AdvanceTest(10);
+            }
+            else AdvanceTest(7);
+        }
+        else if(TestTimedOut(12,TEXT("scissors fully reopen to rearm the next cut"))) FinishPhase3Test();
+        break;
+    case 10:
+        // F releases the parked grasper while the scissors remain selected.
+        SetTestKey(EKeys::F,TestStageTicks==1);
+        if(TestStageTime>1.8f && !IsGrasperHolding() && !bGrasperLatched)
+        {
+            bTestRelease=true; TestCutBaseline=GetCutCount();
+            CaptureTest(TEXT("phase3_06_release.png")); AdvanceTest(11);
+        }
+        else if(TestTimedOut(8,TEXT("F releases grasper while scissors are active"))) FinishPhase3Test();
+        break;
+    case 11:
+        SetTestKey(EKeys::C,TestStageTicks==1);
+        if(TestStageTime>.35f) SetTestKey(EKeys::SpaceBar,true);
+        if(TestStageTime>1.6f)
+        {
+            bTestInactiveNoCut=ActiveTool==0 && GetCutCount()==TestCutBaseline;
+            SetTestKey(EKeys::SpaceBar,false); AdvanceTest(12);
+        }
+        break;
+    case 12:
+        SetTestKey(EKeys::R,TestStageTicks==1);
+        if(TestStageTime>1.6f && Bridge->HasAcknowledgedReset() && GetCutCount()==0 && GetComponentCount()==1 &&
+            !IsGrasperHolding() && !bGrasperLatched && FVector::Distance(ActualTips[0],FVector(-2.2,-4.7,.6))<.08)
+        { bTestReset=true; CaptureTest(TEXT("phase3_07_reset.png")); AdvanceTest(13); }
+        else if(TestTimedOut(12,TEXT("R restores intact topology and releases both tools"))) FinishPhase3Test();
+        break;
+    case 13:
+        if(TestStageTime>.7f) FinishPhase3Test();
+        break;
+    default: FinishPhase3Test(TEXT("Unexpected input test stage")); break;
+    }
+}
+void ATrainingScene::FinishPhase3Test(const FString& Failure)
+{
+    if(bTestFinished) return; bTestFinished=true;
+    const TArray<FName> Held=TestHeldKeys.Array(); for(const FName& K:Held) SetTestKey(FKey(K),false);
+    if(!Failure.IsEmpty()) TestFailures.AddUnique(Failure);
+    TSharedRef<FJsonObject> Report=MakeShared<FJsonObject>(),Checks=MakeShared<FJsonObject>(),Metrics=MakeShared<FJsonObject>();
+    auto Check=[&](const TCHAR* Name,bool Good)
+    { Checks->SetBoolField(Name,Good); if(!Good) TestFailures.AddUnique(FString::Printf(TEXT("Failed check: %s"),Name)); };
+    int32 BladeVertices=0; double EnvelopeExcessMm=0;
+    for(UProceduralMeshComponent* Jaw:ToolJaws)
+        if(Jaw)
+            if(const FProcMeshSection* Section=Jaw->GetProcMeshSection(0))
+                for(const FProcMeshVertex& Vertex:Section->ProcVertexBuffer)
+                {
+                    ++BladeVertices;
+                    const FVector Excess=FVector(Vertex.Position).GetAbs()-FVector(.725,.125,.070);
+                    EnvelopeExcessMm=FMath::Max(EnvelopeExcessMm,FMath::Max(0.0,Excess.GetMax())*10);
+                }
+    Check(TEXT("physics_connected"),IsPhysicsConnected());
+    Check(TEXT("healthy_without_rejected_states"),Bridge && Bridge->IsHealthy() && Bridge->GetUnhealthyStateCount()==0 && Bridge->GetRejectedStateCount()==0);
+    Check(TEXT("regular_exercise_without_safety_stops"),TestPeakSafetyStops==0 && Bridge && Bridge->GetSafetyStopCount()==0);
+    Check(TEXT("contact_grasp"),bTestGrip);
+    Check(TEXT("traction_before_cut"),bTestTension);
+    Check(TEXT("switch_keeps_latched_grasper"),bTestSwitchHeld);
+    Check(TEXT("independent_tool_motion"),bTestIndependentTool);
+    Check(TEXT("closure_changes_physical_topology"),bTestCut);
+    Check(TEXT("repeated_closures_continue_cut"),bTestContinuousCuts);
+    Check(TEXT("separated_components_observed"),TestPeakComponents>1);
+    Check(TEXT("topology_render_binding_updated"),bTestTopologyRendered);
+    Check(TEXT("render_matches_physical_surface"),!TissueRenderBindings.IsEmpty() && TestMaxRenderOffsetMm<.001f);
+    Check(TEXT("both_instrument_models_inside_contact_envelopes"),ToolJaws.Num()==4 && BladeVertices>5000 && EnvelopeExcessMm<.001);
+    Check(TEXT("opening_does_not_cut"),bTestOpeningNoCut);
+    Check(TEXT("grasper_selection_does_not_cut"),bTestInactiveNoCut);
+    Check(TEXT("parked_grasper_releases"),bTestRelease);
+    Check(TEXT("reset_restores_intact_membrane"),bTestReset);
+    Metrics->SetNumberField(TEXT("max_displacement_mm"),TestPeakDisplacementMm);
+    Metrics->SetNumberField(TEXT("max_render_offset_mm"),TestMaxRenderOffsetMm);
+    Metrics->SetNumberField(TEXT("peak_grasper_load_n"),TestPeakForceN);
+    Metrics->SetNumberField(TEXT("instrument_blade_vertices"),BladeVertices);
+    Metrics->SetNumberField(TEXT("blade_envelope_excess_mm"),EnvelopeExcessMm);
+    Metrics->SetNumberField(TEXT("max_cut_count"),TestPeakCuts);
+    Metrics->SetNumberField(TEXT("max_component_count"),TestPeakComponents);
+    Metrics->SetNumberField(TEXT("max_topology_revision"),TestPeakTopology);
+    Metrics->SetNumberField(TEXT("unhealthy_state_count"),Bridge?Bridge->GetUnhealthyStateCount():0);
+    Metrics->SetNumberField(TEXT("rejected_state_count"),Bridge?Bridge->GetRejectedStateCount():0);
+    Metrics->SetNumberField(TEXT("safety_stop_count"),TestPeakSafetyStops);
+    Metrics->SetNumberField(TEXT("elapsed_s"),TestTime);
+    Report->SetNumberField(TEXT("phase"),3); Report->SetNumberField(TEXT("report_version"),1);
+    Report->SetStringField(TEXT("input_path"),TEXT("PlayerController InputKey -> normal UpdateInput. Test writes no tool pose or physical cut command."));
+    Report->SetStringField(TEXT("scope"),TEXT("Software keyboard path, native membrane grasp and cutting, independent tools, topology/render synchronization. Native regression separately tests mass conservation and disconnected elastic response. Not clinical validation."));
+    Report->SetObjectField(TEXT("checks"),Checks); Report->SetObjectField(TEXT("metrics"),Metrics);
+    TArray<TSharedPtr<FJsonValue>> Failures; for(const FString& F:TestFailures) Failures.Add(MakeShared<FJsonValueString>(F));
+    Report->SetArrayField(TEXT("failures"),Failures); Report->SetBoolField(TEXT("passed"),TestFailures.IsEmpty());
+    FString Json; FJsonSerializer::Serialize(Report,TJsonWriterFactory<>::Create(&Json));
+    const FString Path=FPaths::Combine(CaptureDirectory,TEXT("phase3-input-test.json"));
+    const bool Saved=FFileHelper::SaveStringToFile(Json,*Path,FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    UE_LOG(LogTemp,Display,TEXT("LAP_PHASE3_TEST complete passed=%d saved=%d path=%s"),TestFailures.IsEmpty(),Saved,*Path);
+    if(bAutoExit) FPlatformMisc::RequestExit(false);
 }

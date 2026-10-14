@@ -1,8 +1,8 @@
-# Building EndoForge — Phase 2 baseline
+# Building EndoForge — Phase 3
 
-EndoForge contains the UE project, its authored/generated project assets, the native SOFA service, and development scripts. The technical project/executable paths retain the name `LapTrainer`. External SDKs, compiled programs, packaged distributions, training sessions, and local test output are excluded from Git.
+The current UE client uses Phase 3 protocol and the native service defaults to the thin-membrane model. `LapTrainer` remains the technical UE project/executable name. Downloaded dependencies, generated runtime files and delivery packages are excluded from Git.
 
-The baseline was built and tested on its original Windows development machine. A fresh-clone build on a second machine has **not** been independently verified. The instructions below follow the checked-in script interfaces; they do not claim byte-identical executable reproduction.
+A build on another clean machine has not been independently verified. Actual binary hashes and local test results are recorded by the release workflow; these instructions do not promise byte-identical builds.
 
 ## Prerequisites
 
@@ -29,134 +29,42 @@ git lfs pull
 
 The `.uproject` associates with UE 5.7; use the tested 5.7.4 installation for this baseline. Each UE build/run script accepts `-EngineRoot`. The scripts' existing fallback path is a development-machine convenience, not an installation requirement.
 
-## Download and build the physics service
+## Build and verify
 
 ```powershell
 & .\Physics\download-dependencies.ps1
 & .\Physics\build.ps1
-```
-
-The downloader reads [`Physics/dependencies.json`](../Physics/dependencies.json), creates `ThirdParty/`, verifies each pinned download's SHA-256, and extracts the SDK/tool/header packages. The separately downloaded nlohmann/json and Tight Inclusion notices are also hash-pinned in the manifest. A hash mismatch stops the download workflow; it is not silently accepted.
-
-The build produces `Physics/runtime/LapPhysics.exe`. Runtime staging follows SDK DLL dependencies and copies the required libraries, notices, and `etc/sofa.ini` into `Physics/runtime/`. It generates `build-info.json` from the selected CMake compiler/SDK metadata and the current executable/source hashes, marking protocol verification as not yet run. Do not copy only the EXE. The corresponding SOFA source archive is downloaded alongside the SDK for later distribution. See [third-party components](THIRD_PARTY.md).
-
-`Physics/build.ps1` uses the Visual Studio 2022 CMake generator. Runtime staging locates an installed x64 `dumpbin.exe` through `vswhere`; it reports a missing C++ installation explicitly. A new compiler or SDK combination needs fresh testing.
-
-## Build and run UE
-
-```powershell
+& .\Physics\RunPhase3Regression.ps1
 & .\Prototype\LapTrainer\Scripts\Build.ps1 -EngineRoot $EngineRoot -Target Editor
+& .\Scripts\RunPhase3Protocol.ps1 -EngineRoot $EngineRoot
+& .\Scripts\RunPhase3Integration.ps1 -EngineRoot $EngineRoot
 ```
 
-The map and materials are committed through LFS, so asset generation is normally optional. To regenerate them from the checked-in procedural material/map script after building the editor module:
+The downloader uses the pinned manifest in `Physics/dependencies.json`. Already verified downloads in `ThirdParty/` are reused. The build stages the executable and its DLL dependencies into `Physics/runtime/`, with dependency notices, SOFA configuration and source/executable hash metadata. Staging alone does not mark tests as passed; the regression wrapper creates actual native and TCP evidence.
+
+The committed `.umap` and `.uasset` files are Git LFS assets. Asset regeneration is optional: `Prototype/LapTrainer/Scripts/GenerateAssets.ps1` regenerates the map/materials after an editor build and may change those binaries. It does not refine the physical tissue mesh.
+
+For manual development, run `Physics/runtime/LapPhysics.exe` in one terminal and `Prototype/LapTrainer/Scripts/RunEditor.ps1 -EngineRoot $EngineRoot -Game` in another. Phase 3 uses localhost port 47323. Stop the manual service before running wrappers that start their own service on that port; wrappers report occupied ports rather than killing unrelated processes.
+
+## Package and relocate
 
 ```powershell
-& .\Prototype\LapTrainer\Scripts\GenerateAssets.ps1 -EngineRoot $EngineRoot
+& .\Prototype\LapTrainer\Scripts\Package.ps1 -EngineRoot $EngineRoot *> .\tmp\phase3-package.log
+& .\Scripts\AssemblePhase3.ps1
+& .\Scripts\TestPhase3Package.ps1 -RunName 'phase3-packaged-YOUR-RUN'
+python .\Scripts\finalize_phase3.py --run-directory '.\output\verification\phase3-packaged-YOUR-RUN' --package-log '.\tmp\phase3-package.log' --validate-only
+# Repeat the finalizer command without --validate-only after validation.
+& .\Scripts\TestPhase3Archive.ps1
 ```
 
-This writes `/Game/Maps/TrainingMap` and the project materials under `Content/`. Regeneration may change those binary assets; review changes before committing them. It does not change the physical mesh, contact model, or FEM parameters.
+Create the `tmp` directory before redirecting a log into it if it does not exist. Each verification run needs a fresh name. Use `--protocol-directory` on the finalizer to include an independent UE protocol automation receipt. The editor module and packaged game have different hashes and separate evidence.
 
-For a manual development run, start the physics service in a separate PowerShell terminal:
+The assembled application is `output/Phase3/EndoForge/StartTrainer.cmd`. The finalizer writes `output/Phase3/EndoForge_Phase3_Win64.zip`, its hash sidecar, curated verification evidence and a per-file manifest. The archive test extracts into a new directory, verifies every listed file and repeats packaged input acceptance. Its receipt is stored beside the original ZIP.
 
-```powershell
-Push-Location .\Physics\runtime
-try { & .\LapPhysics.exe --port 47322 }
-finally { Pop-Location }
-```
+Existing Phase 3 output is not replaced without `AssemblePhase3.ps1 -Replace`; replacement is constrained to a checked child directory of `output/Phase3/`. Phase 1 and Phase 2 delivery directories are preserved. The runtime package includes prerequisites and required native libraries; users do not need the UE editor, Python, Blender or full SOFA SDK.
 
-Then launch the game from another terminal at the repository root:
+See [PHASE3.md](PHASE3.md) for physical scope, required evidence and test interpretation, and [README-Phase3.md](../Scripts/README-Phase3.md) for Chinese user instructions.
 
-```powershell
-& .\Prototype\LapTrainer\Scripts\RunEditor.ps1 -EngineRoot $EngineRoot -Game
-```
+## Earlier baseline
 
-The UE bridge uses `127.0.0.1:47322`. Only one Phase 2 client can use that service at a time. Close the game and stop the manually started service when finished. The separately assembled package has a launcher that manages this lifecycle automatically. Controls and model limitations are documented in the root README and [`Physics/README.md`](../Physics/README.md).
-
-## Run the existing checks
-
-Do not leave a manual Phase 2 service running when starting the TCP or UE integration tests. Those tests start and stop their own process.
-
-### Native numerical and TCP regression
-
-Run the wrapper after every physics build:
-
-```powershell
-& .\Physics\RunRegression.ps1
-# If Python is not on PATH:
-# & .\Physics\RunRegression.ps1 -Python 'C:/path/to/python.exe'
-```
-
-It checks that port 47322 is free, verifies staged source/executable hashes, executes both real tests, records fresh executable hashes and UTC timestamps, and sets `build-info.json`'s `tested_protocol` to `2` only after both tests pass. Results are `Physics/runtime/phase2-physics-test-results.json` and `phase2-network-test-results.json`. It rejects executable changes during the test run.
-
-The numerical test covers the FEM/contact scenario, force-unit balance, slip/release, recovery, reset, and protection behavior. The TCP test exercises the actual protocol, watchdog, malformed commands, reconnection, jaw poses, and grasp/traction scenario. Inspect `passed`, the individual checks, and model/performance metrics. These are software checks, not biological material validation.
-
-### Individual diagnostic commands
-
-To run just the numerical executable while developing:
-
-```powershell
-Push-Location .\Physics\runtime
-try {
-    & .\LapPhysics.exe --self-test phase2-physics-test-results.json
-    if ($LASTEXITCODE -ne 0) { throw 'Physics regression failed.' }
-}
-finally { Pop-Location }
-```
-
-To run just the real TCP test:
-
-```powershell
-python .\Physics\test_network.py
-```
-
-The raw native executable does not append its own executable/source hashes or UTC timestamp. Use `RunRegression.ps1`, rather than these individual commands, to create complete native release evidence. The TCP Python script does record its own executable hash.
-
-### UE input/contact integration
-
-```powershell
-& .\Scripts\RunPhase2Integration.ps1 -EngineRoot $EngineRoot
-```
-
-The script creates a fresh timestamped directory under `output/verification/`, starts SOFA and UE, then checks the generated `phase2-input-test.json` and screenshots. The test injects UE PlayerController input events consumed by the normal input code. It is not a physical mouse/keyboard or physician usability test. `-LapPhase2Test` is the Phase 2 acceptance mode; the retained Phase 1 AutoDemo/KeyTest modes are not Phase 2 acceptance criteria.
-
-## Create a local Windows test package
-
-```powershell
-& .\Prototype\LapTrainer\Scripts\Package.ps1 -EngineRoot $EngineRoot
-& .\Scripts\AssemblePhase2.ps1
-& .\output\Phase2\LapTrainer\StartTrainer.cmd
-```
-
-The UE archive defaults to `Prototype/Packages/Windows`; the assembled package is `output/Phase2/LapTrainer`. The assembler copies the physics DLLs, `etc` configuration, licenses, project source, and corresponding SOFA source archive. It excludes probes, ordinary test logs/reports, generated caches, and PDBs. It fails if the output directory already contains files unless explicitly passed `-Replace`, which replaces only the validated generated Phase 2 destination. Existing Phase 1 output is separate.
-
-The packaged launcher starts its own hidden physics process, verifies the listening socket belongs to that process, launches UE, and stops only its own physics process afterward. An occupied Phase 2 port is reported; unrelated processes are not killed. UE's prerequisite installer is included by the packaging script. End users do not need UE, Python, or the full SOFA SDK.
-
-For a new packaged acceptance run:
-
-```powershell
-& .\Scripts\TestPhase2Package.ps1
-```
-
-It creates a new `output/verification/phase2-packaged-*` directory with a packaged-run receipt, binary hashes, input/contact results, screenshots, logs, and a selected session CSV.
-
-## Release provenance is a separate step
-
-An ordinary build generates build metadata but **does not claim that tests passed**. `RunRegression.ps1` creates the native verification evidence; UE integration and packaged acceptance are separate checks. Generated metadata and test output are intentionally excluded from Git.
-
-Before using the strict `Scripts/finalize_phase2.py` release finalizer:
-
-1. Build and run `RunRegression.ps1` against that exact build. The scripts record the actual compiler, SDK, SOFA provenance, executable hash, timestamps, and hashes of `main.cpp`, `Phase2Model.h`, `CMakeLists.txt`, and `test_network.py`. Do not reuse metadata from a previous binary.
-2. Build/package UE and retain the successful UAT log. Assemble the distribution with the current, tested physics metadata. If the output directory was already assembled before a rebuild or test, explicitly reassemble it.
-3. Run `TestPhase2Package.ps1` against that assembled package. It writes the packaged-run receipt, input results, screenshots, selected telemetry, and logs, and checks that its binaries did not change during the run.
-4. Pass those exact files to the finalizer. Begin with `--validate-only`; then omit that option to collect evidence, strip generated sessions/logs, generate the manifest, create the ZIP, check ZIP CRCs, and write its SHA-256 sidecar. Any executable change requires new matching evidence.
-
-Example after the above release steps, using your actual paths:
-
-```powershell
-python .\Scripts\finalize_phase2.py `
-    --run-directory '.\output\verification\phase2-packaged-YOUR-RUN' `
-    --package-log '.\path\to\your-successful-uat.log' `
-    --validate-only
-```
-
-The finalizer checks that native tests and the packaged run refer to the delivered executables, and that packaged physics source matches the recorded source hashes. It does not run missing tests or turn old evidence into new evidence. A fresh-machine CI build remains follow-up work.
+The historical [Phase 2 build guide](BUILDING-PHASE2.md) applies to commit `8045a66` and its single-grasper UE source. The current native service retains `--phase2` for legacy diagnostics, but the current UE client requires protocol 3. Rebuilding Phase 2 as a complete application requires its matching historical source; mixing the current client with the old server is unsupported. Preserved packaged deliveries can be run independently.

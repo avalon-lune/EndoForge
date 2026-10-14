@@ -26,6 +26,8 @@ namespace TrainingGeometry
     // The 14.5 x 2.5 x 1.4 mm envelope matches the SOFA collision box. All bevels, grooves and
     // serrations lie inside it, at most 0.1 mm from that envelope; no false through-holes.
     FTrainingRenderMesh MakeSerratedJaw(int32 JawSign);
+    // Beveled, tapered scissor blade inside the same authoritative 14.5 x 2.5 x 1.4 mm envelope.
+    FTrainingRenderMesh MakeScissorBlade(int32 BladeSign);
     FTrainingRenderMesh MakeBeveledBox(const FVector& HalfExtent, float BevelCm);
     void BuildSurfaceBindings(const TArray<FVector>& RestPositions, const TArray<int32>& Faces,
         int32 Subdivisions, TArray<FTrainingSurfaceSample>& OutSamples, FTrainingRenderMesh& OutMesh);

@@ -46,7 +46,7 @@ void USimulationBridge::InitializeBridge()
     IFileManager::Get().MakeDirectory(*SessionDir, true);
     TelemetryPath = FPaths::Combine(SessionDir, TEXT("session-") + FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S")) + TEXT("-utc-") + FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(8) + TEXT(".csv"));
     bTelemetryEnabled = FFileHelper::SaveStringToFile(
-        TEXT("utc,reset_id,mesh_revision,command_x_cm,command_y_cm,command_z_cm,actual_x_cm,actual_y_cm,actual_z_cm,command_closed,command_roll_deg,actual_roll_deg,jaw_open_fraction,contacts,contact_force_n,grip_force_n,penetration_mm,slip_mm,solve_ms,grip_state,healthy\n"),
+        TEXT("utc,reset_id,mesh_revision,topology_revision,cut_count,component_count,cut_length_cm,active_tool,tool_id,command_x_cm,command_y_cm,command_z_cm,actual_x_cm,actual_y_cm,actual_z_cm,command_closed,command_roll_deg,actual_roll_deg,jaw_open_fraction,contacts,contact_force_n,grip_force_n,penetration_mm,slip_mm,solve_ms,grip_state,healthy,safety_stops\n"),
         *TelemetryPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     if (bTelemetryEnabled) UE_LOG(LogTemp, Display, TEXT("LAP_SESSION telemetry=%s; model forces are uncalibrated"), *TelemetryPath);
     NextConnectSeconds = 0;
@@ -92,6 +92,7 @@ void USimulationBridge::Disconnect(const FString& Reason)
     bGrasping = false;
     bHasToolState = false;
     JawPoses.Reset();
+    ToolStates.Reset();
     ContactCount = 0;
     ContactForceNewton = 0;
     PenetrationMm = 0;
@@ -145,23 +146,31 @@ bool USimulationBridge::GetJawPose(int32 JawIndex, FTransform& OutPoseCm) const
     return true;
 }
 
-void USimulationBridge::QueueCommand(const FVector& TipCm, bool bClosed, float RollDeg)
+void USimulationBridge::QueueCommand(const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bPermitClosure)
 {
     // A partially transmitted record must finish before the next record is queued.
-    if (!SendBuffer.IsEmpty()) return;
-    LastCommandTipCm = TipCm;
-    bLastCommandClosed = bClosed;
-    LastCommandRollDeg = RollDeg;
+    if (!SendBuffer.IsEmpty() || Commands.Num() != 2) return;
+    LastCommands = Commands;
+    LastActiveTool = FMath::Clamp(ActiveTool, 0, 1);
     TSharedRef<FJsonObject> Command = MakeShared<FJsonObject>();
     Command->SetStringField(TEXT("type"), TEXT("command"));
     Command->SetNumberField(TEXT("seq"), static_cast<double>(++CommandSequence));
-    TArray<TSharedPtr<FJsonValue>> Tip;
-    Tip.Add(MakeShared<FJsonValueNumber>(TipCm.X * .01));
-    Tip.Add(MakeShared<FJsonValueNumber>(TipCm.Y * .01));
-    Tip.Add(MakeShared<FJsonValueNumber>(TipCm.Z * .01));
-    Command->SetArrayField(TEXT("tip_m"), Tip);
-    Command->SetNumberField(TEXT("closed"), bClosed ? 1.0 : 0.0);
-    Command->SetNumberField(TEXT("roll_deg"), FMath::IsFinite(RollDeg) ? FMath::UnwindDegrees(RollDeg) : 0.0f);
+    Command->SetNumberField(TEXT("active_tool"), LastActiveTool);
+    TArray<TSharedPtr<FJsonValue>> Tools;
+    for (const FLapToolCommand& Input : Commands)
+    {
+        TSharedRef<FJsonObject> Tool = MakeShared<FJsonObject>();
+        TArray<TSharedPtr<FJsonValue>> Tip;
+        const FVector SafeTip = Input.TipCm.ContainsNaN() ? FVector(0, -4.7, 2.5) : Input.TipCm;
+        Tip.Add(MakeShared<FJsonValueNumber>(SafeTip.X * .01));
+        Tip.Add(MakeShared<FJsonValueNumber>(SafeTip.Y * .01));
+        Tip.Add(MakeShared<FJsonValueNumber>(SafeTip.Z * .01));
+        Tool->SetArrayField(TEXT("tip_m"), Tip);
+        Tool->SetNumberField(TEXT("closed"), Input.bClosed && bPermitClosure ? 1.0 : 0.0);
+        Tool->SetNumberField(TEXT("roll_deg"), FMath::IsFinite(Input.RollDeg) ? FMath::UnwindDegrees(Input.RollDeg) : 0.0f);
+        Tools.Add(MakeShared<FJsonValueObject>(Tool));
+    }
+    Command->SetArrayField(TEXT("tools"), Tools);
     Command->SetNumberField(TEXT("reset_id"), ResetId);
     Command->SetBoolField(TEXT("paused"), false);
     FString Text;
@@ -175,6 +184,14 @@ void USimulationBridge::QueueCommand(const FVector& TipCm, bool bClosed, float R
 
 void USimulationBridge::TickBridge(float DeltaSeconds, const FVector& ToolTipCm, bool bClosed, bool bReset, float RollDeg)
 {
+    TArray<FLapToolCommand> Commands;
+    Commands.Add({ToolTipCm, bClosed, RollDeg});
+    Commands.Add({FVector(2.2, -4.7, .6), false, 90.0f});
+    TickDualBridge(DeltaSeconds, Commands, 0, bReset);
+}
+
+void USimulationBridge::TickDualBridge(float DeltaSeconds, const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bReset)
+{
     if (!bInitialized) InitializeBridge();
     if (bReset) ++ResetId;
     if (!Socket) { TryConnect(); return; }
@@ -187,7 +204,7 @@ void USimulationBridge::TickBridge(float DeltaSeconds, const FVector& ToolTipCm,
     }
     ReceiveMessages();
     if (!Socket) return;
-    QueueCommand(ToolTipCm, bClosed && bHealthy && IsConnected() && ResetId == AcknowledgedResetId, RollDeg);
+    QueueCommand(Commands, ActiveTool, bHealthy && IsConnected() && ResetId == AcknowledgedResetId);
     if (SendOffset < SendBuffer.Num())
     {
         int32 Sent = 0;
@@ -228,167 +245,188 @@ void USimulationBridge::ReceiveMessages()
 
 void USimulationBridge::HandleMessage(const FString& Line)
 {
-    auto RejectState = [this](const TCHAR* Reason)
+    auto Reject = [this](const TCHAR* Reason)
     {
         ++RejectedStateCount;
         Status = FString(TEXT("Invalid SOFA state: ")) + Reason;
-        const double Now = FPlatformTime::Seconds();
-        if (Now - LastRejectedStateLogSeconds > 3.0)
+        if (FPlatformTime::Seconds() - LastRejectedStateLogSeconds > 3.0)
         {
-            LastRejectedStateLogSeconds = Now;
+            LastRejectedStateLogSeconds = FPlatformTime::Seconds();
             UE_LOG(LogTemp, Warning, TEXT("LAP_PROTOCOL %s"), *Status);
         }
     };
     TSharedPtr<FJsonObject> Object;
-    auto Reader = TJsonReaderFactory<>::Create(Line);
-    if (!FJsonSerializer::Deserialize(Reader, Object) || !Object.IsValid()) { RejectState(TEXT("malformed JSON")); return; }
+    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Line), Object) || !Object.IsValid())
+    { Reject(TEXT("malformed JSON")); return; }
     FString Type;
-    if (!Object->TryGetStringField(TEXT("type"), Type)) { RejectState(TEXT("message type missing")); return; }
-    TArray<int32> CandidateTriangles = Triangles;
-    if (Type == TEXT("hello"))
+    if (!Object->TryGetStringField(TEXT("type"), Type)) { Reject(TEXT("message type missing")); return; }
+    const bool Hello = Type == TEXT("hello");
+    if (!Hello && (Type != TEXT("state") || !bHandshake)) { Reject(TEXT("unexpected message")); return; }
+    if (Hello)
     {
+        if (bHandshake) { Reject(TEXT("duplicate handshake on an established connection")); return; }
         double Protocol = 0;
         FString Units;
-        if (!Object->TryGetNumberField(TEXT("protocol"), Protocol) || Protocol != 2 ||
+        if (!Object->TryGetNumberField(TEXT("protocol"), Protocol) || Protocol != 3 ||
             !Object->TryGetStringField(TEXT("units"), Units) || Units != TEXT("m"))
-        { RejectState(TEXT("Phase 2 requires its matching SOFA service (protocol 2)")); return; }
-        const TArray<TSharedPtr<FJsonValue>>* Faces = nullptr;
-        if (!Object->TryGetArrayField(TEXT("triangles"), Faces)) { RejectState(TEXT("triangles missing")); return; }
-        TArray<int32> NewTriangles;
-        for (const auto& Face : *Faces)
-        {
-            const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-            if (!Face->TryGetArray(Values) || Values->Num() != 3) { RejectState(TEXT("invalid face")); return; }
-            for (const auto& Value : *Values)
-            {
-                double Index = 0;
-                if (!Value->TryGetNumber(Index) || !FMath::IsFinite(Index) || Index < 0 || Index > 99999 || Index != FMath::FloorToDouble(Index)) { RejectState(TEXT("invalid face index")); return; }
-                NewTriangles.Add(static_cast<int32>(Index));
-            }
-        }
-        if (NewTriangles.IsEmpty()) { RejectState(TEXT("empty mesh")); return; }
-        CandidateTriangles = MoveTemp(NewTriangles);
+        { Reject(TEXT("Phase 3 requires matching protocol 3 service")); return; }
     }
-    if (Type == TEXT("hello") || (Type == TEXT("state") && bHandshake))
+    // Positions, connectivity and tool poses are one transaction. Never display a new
+    // topology with vertices or commands from a different accepted state.
+    const TArray<TSharedPtr<FJsonValue>> *Nodes = nullptr, *Faces = nullptr;
+    if (!Object->TryGetArrayField(TEXT("vertices"), Nodes) || Nodes->IsEmpty() || Nodes->Num() > 10000 ||
+        !Object->TryGetArrayField(TEXT("triangles"), Faces) || Faces->IsEmpty() || Faces->Num() > 20000)
+    { Reject(TEXT("missing or excessive mesh")); return; }
+    TArray<FVector> NewVertices;
+    for (const auto& Node : *Nodes)
     {
-        const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
-        if (!Object->TryGetArrayField(TEXT("vertices"), Nodes) || Nodes->IsEmpty() || Nodes->Num() > 100000) { RejectState(TEXT("invalid vertex count")); return; }
-        TArray<FVector> Updated;
-        Updated.Reserve(Nodes->Num());
-        for (const auto& Node : *Nodes)
-        {
-            const TArray<TSharedPtr<FJsonValue>>* Position = nullptr;
-            if (!Node->TryGetArray(Position) || Position->Num() != 3) { RejectState(TEXT("invalid vertex")); return; }
-            double X = 0, Y = 0, Z = 0;
-            if (!(*Position)[0]->TryGetNumber(X) || !(*Position)[1]->TryGetNumber(Y) || !(*Position)[2]->TryGetNumber(Z)) { RejectState(TEXT("invalid vertex coordinates")); return; }
-            const FVector P(X * 100.0, Y * 100.0, Z * 100.0);
-            if (P.ContainsNaN() || P.GetAbsMax() > 10000) { RejectState(TEXT("non-finite or excessive vertex coordinates")); return; }
-            Updated.Add(P);
-        }
-        for (const int32 Index : CandidateTriangles) if (!Updated.IsValidIndex(Index)) { RejectState(TEXT("face index outside vertex array")); return; }
-        // Validate the whole protocol-2 state before committing either the mesh or the tool.
-        // A malformed telemetry value must not keep the interaction watchdog alive.
-        FVector NewTip = FVector::ZeroVector;
-        TArray<FLapJawPose> NewJaws;
-        double NewForce = 0, NewStep = 0, NewDisp = 0, NewReset = 0;
-        double NewRoll = 0, NewOpen = 1, NewContacts = 0, NewContactForce = 0;
-        double NewPenetration = 0, NewSlip = 0;
-        bool NewGrasping = false, NewHealthy = true;
-        FString NewGrip, Detail;
-        if (Type == TEXT("state"))
-        {
-            if (Updated.Num() != VerticesCm.Num() ||
-                !Object->TryGetBoolField(TEXT("grasping"), NewGrasping) ||
-                !Object->TryGetBoolField(TEXT("healthy"), NewHealthy) ||
-                !ReadBoundedNumber(Object, TEXT("force_n"), NewForce, 0, 100000) ||
-                !ReadBoundedNumber(Object, TEXT("step_ms"), NewStep, 0, 60000) ||
-                !ReadBoundedNumber(Object, TEXT("max_displacement_m"), NewDisp, 0, 10) ||
-                !ReadBoundedNumber(Object, TEXT("reset_id"), NewReset, 0, MAX_int32) ||
-                NewReset != FMath::FloorToDouble(NewReset) ||
-                !ReadVector(Object, TEXT("tip_m"), NewTip, 100.0) ||
-                !ReadBoundedNumber(Object, TEXT("roll_deg"), NewRoll, -36000, 36000) ||
-                !ReadBoundedNumber(Object, TEXT("jaw_open_fraction"), NewOpen, 0, 1) ||
-                !ReadBoundedNumber(Object, TEXT("contact_count"), NewContacts, 0, 100000) ||
-                NewContacts != FMath::FloorToDouble(NewContacts) ||
-                !ReadBoundedNumber(Object, TEXT("contact_force_n"), NewContactForce, 0, 100000) ||
-                !ReadBoundedNumber(Object, TEXT("penetration_m"), NewPenetration, 0, 10) ||
-                !ReadBoundedNumber(Object, TEXT("slip_distance_m"), NewSlip, 0, 10) ||
-                !Object->TryGetStringField(TEXT("grip_state"), NewGrip) || NewGrip.Len() > 64)
-            { RejectState(TEXT("required contact telemetry missing or out of bounds")); return; }
-            const TArray<TSharedPtr<FJsonValue>>* PoseValues = nullptr;
-            if (!Object->TryGetArrayField(TEXT("jaw_poses"), PoseValues) || PoseValues->Num() != 2)
-            { RejectState(TEXT("expected two jaw frames")); return; }
-            for (const auto& Value : *PoseValues)
-            {
-                const TSharedPtr<FJsonObject>* PoseObject = nullptr;
-                if (!Value->TryGetObject(PoseObject) || !PoseObject->IsValid())
-                { RejectState(TEXT("jaw frame is not an object")); return; }
-                FLapJawPose Pose;
-                if (!ReadVector(*PoseObject, TEXT("center_m"), Pose.CenterCm, 100.0) ||
-                    !ReadVector(*PoseObject, TEXT("axis"), Pose.Axis) ||
-                    !ReadVector(*PoseObject, TEXT("side"), Pose.Side) ||
-                    !ReadVector(*PoseObject, TEXT("normal"), Pose.Normal))
-                { RejectState(TEXT("jaw frame vectors missing or non-finite")); return; }
-                if (!FMath::IsNearlyEqual(Pose.Axis.SizeSquared(), 1.0, 0.01) ||
-                    !FMath::IsNearlyEqual(Pose.Side.SizeSquared(), 1.0, 0.01) ||
-                    !FMath::IsNearlyEqual(Pose.Normal.SizeSquared(), 1.0, 0.01) ||
-                    FMath::Abs(FVector::DotProduct(Pose.Axis, Pose.Side)) > 0.01 ||
-                    FMath::Abs(FVector::DotProduct(Pose.Axis, Pose.Normal)) > 0.01 ||
-                    FMath::Abs(FVector::DotProduct(Pose.Side, Pose.Normal)) > 0.01 ||
-                    FVector::DotProduct(FVector::CrossProduct(Pose.Axis, Pose.Side), Pose.Normal) < 0.99)
-                { RejectState(TEXT("jaw axes are not an orthonormal right-handed frame")); return; }
-                NewJaws.Add(Pose);
-            }
-            Object->TryGetStringField(TEXT("message"), Detail);
-        }
-        VerticesCm = MoveTemp(Updated);
-        Triangles = MoveTemp(CandidateTriangles);
-        ++MeshRevision;
-        if (Type == TEXT("hello"))
-        {
-            Object->TryGetStringField(TEXT("solver"), SolverName);
-            bHandshake = true;
-            PhysicsNodeCount = VerticesCm.Num();
-            UE_LOG(LogTemp, Display, TEXT("LapTrainer physics handshake: %s"), *SolverName);
-        }
-        if (Type == TEXT("state"))
-        {
-            LastStateSeconds = FPlatformTime::Seconds();
-            bGrasping = NewGrasping;
-            bHealthy = NewHealthy;
-            if (!NewHealthy) ++UnhealthyStateCount;
-            ForceNewton = static_cast<float>(NewForce);
-            PhysicsStepMs = static_cast<float>(NewStep);
-            MaxDisplacementCm = static_cast<float>(NewDisp * 100);
-            AcknowledgedResetId = static_cast<int32>(NewReset);
-            ActualTipCm = NewTip;
-            ActualRollDeg = static_cast<float>(NewRoll);
-            JawOpenFraction = static_cast<float>(NewOpen);
-            ContactCount = static_cast<int32>(NewContacts);
-            ContactForceNewton = static_cast<float>(NewContactForce);
-            PenetrationMm = static_cast<float>(NewPenetration * 1000);
-            SlipDistanceMm = static_cast<float>(NewSlip * 1000);
-            GripState = NewGrip;
-            JawPoses = MoveTemp(NewJaws);
-            bHasToolState = true;
-            Status = bHealthy ? FString(TEXT("SOFA FEM | ")) + GripState : FString(TEXT("SOFA paused: ")) + Detail.Left(160);
-            RecordTelemetry();
-        }
+        const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+        if (!Node->TryGetArray(Values) || Values->Num() != 3) { Reject(TEXT("vertex shape")); return; }
+        double P[3] = {};
+        for (int32 I = 0; I < 3; ++I)
+            if (!(*Values)[I]->TryGetNumber(P[I]) || !FMath::IsFinite(P[I]) || FMath::Abs(P[I]) > 2)
+            { Reject(TEXT("vertex coordinate")); return; }
+        NewVertices.Add(FVector(P[0], P[1], P[2]) * 100.0);
     }
+    TArray<int32> NewTriangles;
+    for (const auto& Face : *Faces)
+    {
+        const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+        if (!Face->TryGetArray(Values) || Values->Num() != 3) { Reject(TEXT("face shape")); return; }
+        int32 Idx[3] = {};
+        for (int32 I = 0; I < 3; ++I)
+        {
+            double N = 0;
+            if (!(*Values)[I]->TryGetNumber(N) || !FMath::IsFinite(N) || N < 0 || N >= NewVertices.Num() || N != FMath::FloorToDouble(N))
+            { Reject(TEXT("face index outside vertex array")); return; }
+            Idx[I] = static_cast<int32>(N);
+        }
+        if (Idx[0] == Idx[1] || Idx[0] == Idx[2] || Idx[1] == Idx[2]) { Reject(TEXT("repeated triangle vertex")); return; }
+        NewTriangles.Append(Idx, 3);
+    }
+    double NewTopology = 0, NewCuts = 0, NewComponents = 1, NewLength = 0;
+    double NewStep = 0, NewDisp = 0, NewReset = 0, NewSafetyStops = 0;
+    bool NewHealthy = true;
+    TArray<FLapToolState> NewTools;
+    FString Detail;
+    if (!Hello)
+    {
+        auto IntField = [&](const TCHAR* Name, double& Out, double Max)
+        { return ReadBoundedNumber(Object, Name, Out, 0, Max) && Out == FMath::FloorToDouble(Out); };
+        if (!IntField(TEXT("safety_stops"), NewSafetyStops, MAX_int32) ||
+            !IntField(TEXT("topology_revision"), NewTopology, MAX_int32) ||
+            !IntField(TEXT("cut_count"), NewCuts, 100000) || !IntField(TEXT("component_count"), NewComponents, 20000) || NewComponents < 1 ||
+            !ReadBoundedNumber(Object, TEXT("cut_length_m"), NewLength, 0, 100) ||
+            !ReadBoundedNumber(Object, TEXT("step_ms"), NewStep, 0, 60000) ||
+            !ReadBoundedNumber(Object, TEXT("max_displacement_m"), NewDisp, 0, 10) ||
+            !IntField(TEXT("reset_id"), NewReset, MAX_int32) || !Object->TryGetBoolField(TEXT("healthy"), NewHealthy))
+        { Reject(TEXT("invalid topology or health telemetry")); return; }
+        if (NewReset > ResetId || (bHasToolState && NewReset < AcknowledgedResetId))
+        { Reject(TEXT("unsolicited or stale reset acknowledgement")); return; }
+        if (bHasToolState && static_cast<int32>(NewReset) == AcknowledgedResetId)
+        {
+            if (NewTopology < TopologyRevision || NewCuts < CutCount)
+            { Reject(TEXT("topology went backwards without reset")); return; }
+            if (static_cast<uint64>(NewTopology) == TopologyRevision &&
+                (NewTriangles != Triangles || NewVertices.Num() != VerticesCm.Num()))
+            { Reject(TEXT("connectivity changed without a topology revision")); return; }
+        }
+        const TArray<TSharedPtr<FJsonValue>>* ToolValues = nullptr;
+        if (!Object->TryGetArrayField(TEXT("tools"), ToolValues) || ToolValues->Num() != 2)
+        { Reject(TEXT("expected two independent tools")); return; }
+        for (const auto& Value : *ToolValues)
+        {
+            const TSharedPtr<FJsonObject>* Tool = nullptr;
+            if (!Value->TryGetObject(Tool) || !Tool->IsValid()) { Reject(TEXT("tool object")); return; }
+            FLapToolState T;
+            double Roll = 0, Open = 0, Force = 0, Contacts = 0, ContactForce = 0, Pen = 0, Slip = 0;
+            if (!ReadVector(*Tool, TEXT("tip_m"), T.ActualTipCm, 100) ||
+                !ReadBoundedNumber(*Tool, TEXT("roll_deg"), Roll, -36000, 36000) ||
+                !ReadBoundedNumber(*Tool, TEXT("jaw_open_fraction"), Open, 0, 1) ||
+                !ReadBoundedNumber(*Tool, TEXT("force_n"), Force, 0, 100000) ||
+                !ReadBoundedNumber(*Tool, TEXT("contact_count"), Contacts, 0, 100000) || Contacts != FMath::FloorToDouble(Contacts) ||
+                !ReadBoundedNumber(*Tool, TEXT("contact_force_n"), ContactForce, 0, 100000) ||
+                !ReadBoundedNumber(*Tool, TEXT("penetration_m"), Pen, 0, 10) ||
+                !ReadBoundedNumber(*Tool, TEXT("slip_distance_m"), Slip, 0, 10) ||
+                !(*Tool)->TryGetBoolField(TEXT("grasping"), T.bGrasping) ||
+                !(*Tool)->TryGetStringField(TEXT("grip_state"), T.GripState) || T.GripState.Len() > 64)
+            { Reject(TEXT("invalid dual tool telemetry")); return; }
+            T.RollDeg = Roll; T.JawOpenFraction = Open; T.ForceNewton = Force;
+            T.ContactCount = static_cast<int32>(Contacts); T.ContactForceNewton = ContactForce;
+            T.PenetrationMm = Pen * 1000; T.SlipDistanceMm = Slip * 1000;
+            const TArray<TSharedPtr<FJsonValue>>* Jaws = nullptr;
+            if (!(*Tool)->TryGetArrayField(TEXT("jaw_poses"), Jaws) || Jaws->Num() != 2)
+            { Reject(TEXT("tool needs two jaw frames")); return; }
+            for (const auto& J : *Jaws)
+            {
+                const TSharedPtr<FJsonObject>* P = nullptr;
+                FLapJawPose Pose;
+                if (!J->TryGetObject(P) || !P->IsValid() ||
+                    !ReadVector(*P, TEXT("center_m"), Pose.CenterCm, 100) ||
+                    !ReadVector(*P, TEXT("axis"), Pose.Axis) || !ReadVector(*P, TEXT("side"), Pose.Side) || !ReadVector(*P, TEXT("normal"), Pose.Normal))
+                { Reject(TEXT("jaw frame vectors")); return; }
+                if (!FMath::IsNearlyEqual(Pose.Axis.SizeSquared(), 1.0, .01) ||
+                    !FMath::IsNearlyEqual(Pose.Side.SizeSquared(), 1.0, .01) ||
+                    !FMath::IsNearlyEqual(Pose.Normal.SizeSquared(), 1.0, .01) ||
+                    FMath::Abs(FVector::DotProduct(Pose.Axis, Pose.Side)) > .01 ||
+                    FMath::Abs(FVector::DotProduct(Pose.Axis, Pose.Normal)) > .01 ||
+                    FMath::Abs(FVector::DotProduct(Pose.Side, Pose.Normal)) > .01 ||
+                    FVector::DotProduct(FVector::CrossProduct(Pose.Axis, Pose.Side), Pose.Normal) < .99)
+                { Reject(TEXT("jaw frame is not orthonormal")); return; }
+                T.JawPoses.Add(Pose);
+            }
+            NewTools.Add(MoveTemp(T));
+        }
+        Object->TryGetStringField(TEXT("message"), Detail);
+    }
+    VerticesCm = MoveTemp(NewVertices);
+    Triangles = MoveTemp(NewTriangles);
+    PhysicsNodeCount = VerticesCm.Num();
+    ++MeshRevision;
+    if (Hello)
+    {
+        Object->TryGetStringField(TEXT("solver"), SolverName);
+        bHandshake = true;
+        UE_LOG(LogTemp, Display, TEXT("EndoForge protocol 3 handshake: %s"), *SolverName);
+        return;
+    }
+    ToolStates = MoveTemp(NewTools);
+    TopologyRevision = static_cast<uint64>(NewTopology);
+    CutCount = static_cast<int32>(NewCuts); ComponentCount = static_cast<int32>(NewComponents); CutLengthCm = NewLength * 100;
+    PhysicsStepMs = NewStep; MaxDisplacementCm = NewDisp * 100;
+    AcknowledgedResetId = static_cast<int32>(NewReset); bHealthy = NewHealthy;
+    if (!bHealthy) ++UnhealthyStateCount;
+    // Retain observed protection history across resets and reconnects.
+    SafetyStopCount = FMath::Max(SafetyStopCount, static_cast<uint64>(NewSafetyStops));
+    bHasToolState = true; LastStateSeconds = FPlatformTime::Seconds();
+    const FLapToolState& Grasper = ToolStates[0];
+    bGrasping = Grasper.bGrasping; ForceNewton = Grasper.ForceNewton;
+    ActualTipCm = Grasper.ActualTipCm; ActualRollDeg = Grasper.RollDeg; JawOpenFraction = Grasper.JawOpenFraction;
+    ContactCount = Grasper.ContactCount; ContactForceNewton = Grasper.ContactForceNewton;
+    PenetrationMm = Grasper.PenetrationMm; SlipDistanceMm = Grasper.SlipDistanceMm;
+    GripState = Grasper.GripState; JawPoses = Grasper.JawPoses;
+    Status = bHealthy ? FString(TEXT("SOFA | ")) + Detail.Left(160) : FString(TEXT("SOFA paused: ")) + Detail.Left(160);
+    RecordTelemetry();
 }
 
 void USimulationBridge::RecordTelemetry()
 {
     const double Now = FPlatformTime::Seconds();
-    if (!bTelemetryEnabled || Now - LastTelemetrySeconds < 0.1) return;
+    if (!bTelemetryEnabled || Now - LastTelemetrySeconds < .1 || ToolStates.Num() != 2 || LastCommands.Num() != 2) return;
     LastTelemetrySeconds = Now;
-    FString SafeGrip = GripState.Replace(TEXT(","), TEXT("_")).Replace(TEXT("\n"), TEXT(" ")).Replace(TEXT("\r"), TEXT(" "));
-    TelemetryBuffer += FString::Printf(TEXT("%s,%d,%llu,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%d,%.3f,%.3f,%.4f,%d,%.6f,%.6f,%.6f,%.6f,%.4f,%s,%d\n"),
-        *FDateTime::UtcNow().ToIso8601(), AcknowledgedResetId, static_cast<unsigned long long>(MeshRevision),
-        LastCommandTipCm.X, LastCommandTipCm.Y, LastCommandTipCm.Z, ActualTipCm.X, ActualTipCm.Y, ActualTipCm.Z,
-        bLastCommandClosed ? 1 : 0, LastCommandRollDeg, ActualRollDeg, JawOpenFraction, ContactCount,
-        ContactForceNewton, ForceNewton, PenetrationMm, SlipDistanceMm, PhysicsStepMs, *SafeGrip, bHealthy ? 1 : 0);
-    if (Now - LastTelemetryFlushSeconds > 1.0) FlushTelemetry();
+    for (int32 I = 0; I < 2; ++I)
+    {
+        const FLapToolState& T = ToolStates[I];
+        const FLapToolCommand& C = LastCommands[I];
+        FString SafeGrip = T.GripState.Replace(TEXT(","), TEXT("_")).Replace(TEXT("\n"), TEXT(" ")).Replace(TEXT("\r"), TEXT(" "));
+        TelemetryBuffer += FString::Printf(TEXT("%s,%d,%llu,%llu,%d,%d,%.5f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%d,%.3f,%.3f,%.4f,%d,%.6f,%.6f,%.6f,%.6f,%.4f,%s,%d,%llu\n"),
+            *FDateTime::UtcNow().ToIso8601(), AcknowledgedResetId, static_cast<unsigned long long>(MeshRevision),
+            static_cast<unsigned long long>(TopologyRevision), CutCount, ComponentCount, CutLengthCm, LastActiveTool, I,
+            C.TipCm.X, C.TipCm.Y, C.TipCm.Z, T.ActualTipCm.X, T.ActualTipCm.Y, T.ActualTipCm.Z,
+            C.bClosed ? 1 : 0, C.RollDeg, T.RollDeg, T.JawOpenFraction, T.ContactCount,
+            T.ContactForceNewton, T.ForceNewton, T.PenetrationMm, T.SlipDistanceMm, PhysicsStepMs, *SafeGrip, bHealthy ? 1 : 0, static_cast<unsigned long long>(SafetyStopCount));
+    }
+    if (Now - LastTelemetryFlushSeconds > 1) FlushTelemetry();
 }
 
 void USimulationBridge::FlushTelemetry()

@@ -69,26 +69,26 @@ $sdkVersion = [regex]::Match([IO.File]::ReadAllText($vcxproj), '<WindowsTargetPl
 if (-not $sdkVersion) { throw 'Cannot read Windows SDK version from the generated Visual Studio project.' }
 $exePath = Join-Path $runtime 'LapPhysics.exe'
 $exeInfo = Get-Item -LiteralPath $exePath
-foreach ($compiledSource in @('main.cpp','Phase2Model.h')) {
+foreach ($compiledSource in @('main.cpp','Phase2Model.h','Phase3Model.h')) {
     if ((Get-Item -LiteralPath (Join-Path $PSScriptRoot $compiledSource)).LastWriteTimeUtc -gt $exeInfo.LastWriteTimeUtc) {
         throw "Source $compiledSource is newer than LapPhysics.exe. Rebuild before writing build metadata."
     }
 }
 $sourceHashes = [ordered]@{}
-foreach ($sourceName in @('main.cpp','Phase2Model.h','CMakeLists.txt','test_network.py')) {
+foreach ($sourceName in @('main.cpp','Phase2Model.h','Phase3Model.h','CMakeLists.txt','test_network.py','test_phase3_network.py','RunPhase3Regression.ps1')) {
     $sourceHashes[$sourceName] = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $sourceName) -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dependencies.json') -Raw | ConvertFrom-Json
 $sofaDependency = $manifest.dependencies | Where-Object name -eq 'SOFA Windows SDK' | Select-Object -First 1
 $buildInfo = [ordered]@{
-    phase = 2; protocol = 2; tested_protocol = $null
+    phase = 3; protocol = 3; tested_protocol = $null
     sofa_version = $sofaDependency.version; sofa_commit = $sofaDependency.source_commit
     compiler = "MSVC $compilerVersion"; windows_sdk = $sdkVersion
     cmake = $compilerMetadata.Directory.Name; build_configuration = 'Release x64'
     source_sha256 = $sourceHashes['main.cpp']; source_files_sha256 = $sourceHashes
     executable_sha256 = (Get-FileHash -LiteralPath $exePath -Algorithm SHA256).Hash.ToLowerInvariant()
     built_at_utc = $exeInfo.LastWriteTimeUtc.ToString('o'); staged_at_utc = [DateTime]::UtcNow.ToString('o')
-    verification_status = 'not run by this staging operation; run RunRegression.ps1'
+    verification_status = 'not run by this staging operation; run RunPhase3Regression.ps1'
 }
 $buildInfo | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $runtime 'build-info.json') -Encoding UTF8
 Write-Host "Staged $($seen.Count) application and library files into $runtime"
