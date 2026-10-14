@@ -4,33 +4,29 @@ EndoForge aims to become a laparoscopic skills simulation environment in which t
 
 This document separates delivered work from planned work. It is a technical direction, not a delivery schedule or a claim of clinical validation. Team size, hardware, clinical partners and available calibration data will determine the eventual scope and timing.
 
-## Current baseline: Phase 2 implemented
+## Delivered locally: Phase 3 — two instruments and membrane cutting
 
-The current source implements one virtual grasper acting on a 120 × 80 × 12 mm training pad. SOFA advances a 351-node, 1,152-tetrahedron corotational FEM model and resolves native frictional contacts between the tissue, prescribed jaws and tray. A contact-supported closing controller, opposing-contact grasp detection and tracked material-point slip complement the constraint solve. Physics targets 30 Hz; UE renders and handles keyboard/mouse input separately.
+The current source implements a keyboard/mouse grasper and scissors acting on a thin training membrane. Each tool retains its own target, closure, roll and trocar-constrained actual pose. The grasper can remain deliberately closed while the selected scissors performs repeated cuts.
 
-The visual model includes separate beveled and serrated jaws, hinge hardware, shaft and insulation. Tissue rendering is bound to the physical surface with a bounded smoothing offset. The scene offers four views, actual-versus-commanded tool feedback, interaction-state indicators and session telemetry.
+Physical cutting splits material connectivity along selected in-plane mesh edges through a thin tetrahedral layer, retaining element volumes, material mass and pre-cut motion. Elastic and contact structures are rebuilt on that topology; the complete current mesh and both tools are accepted atomically by UE. The render surface uses linear bindings with no artificial connection across duplicated cut nodes. Extended incisions can separate tissue components.
 
-Local acceptance covers numerical behavior, network robustness, the normal UE keyboard path, a packaged application and a relocated package. The [Phase 2 verification summary](verification/phase2-summary.json) records accepted results. Current evidence includes sustained traction, opening-induced release, natural slip, reset, motion limits, solver health and sampled penetration checks. These are engineering checks. Material constants and contact parameters have not been identified from measured tissue or instrument data.
+The [Phase 3 specification](PHASE3.md) records the actual constitutive model, cut resolution, closing/contact gates, numerical protections and exclusions. This remains a discrete engineering model of a thin training specimen. It does not establish arbitrary volumetric organ cutting, biological fracture energy, clinically measured cutting forces or validated training effectiveness.
 
-The earlier Phase 1 established the UE/SOFA transport and basic interaction loop. Its proximity-based grabbing mechanism is superseded in the current Phase 2 interaction path; its older automation modes are not current acceptance criteria.
+The [local verification summary](verification/phase3-summary.json) records successful native, TCP, packaged and extracted-package checks.
 
-## Phase 3: two instruments and thin-membrane cutting — planned next
+Acceptance consists of a reproducible hold–tension–cut–release exercise, physical mass/connectivity and disconnected-response tests, inactive-tool/air-cut rejection, reset, protocol robustness, UE input/render checks and packaged/relocated testing. Actual receipts, rather than this roadmap, determine whether any particular build completed those checks. Local deliverables and evidence are placed in `output/Phase3/` and `output/verification/`.
 
-**Goal:** hold and tension a thin specimen with one instrument while a second instrument makes a physically represented cut, with clear visual and mechanical consequences.
+## Preserved earlier milestones
 
-The first cutting task should use a purpose-designed thin membrane rather than claiming arbitrary cutting through the current volumetric pad. Its constitutive model, thickness representation and topology updates must be chosen and tested together. A tool crossing a texture or hiding triangles is insufficient: the cut must alter mechanical connectivity and expose the resulting free edges.
+Phase 1 established the external physics bridge and keyboard/mouse grasp–traction–release loop. Its proximity-assisted grasp was superseded by native contact mechanics in Phase 2.
 
-Proposed work:
+Phase 2 implements one grasper acting on a 120 × 80 × 12 mm pad, using a 351-node, 1,152-tetrahedron corotational FEM model, native friction contact, bounded instrument motion and detailed procedural geometry. Its [verification summary](verification/phase2-summary.json) belongs to that historical delivery. Existing `output/Phase1/` and `output/Phase2/` packages are preserved; the current thin-membrane client is a later source revision.
 
-- Add a second independent instrument, per-tool control state, trocar constraints and actual returned poses.
-- Define usable keyboard/mouse switching or coordinated control before introducing physical input hardware.
-- Implement the membrane model and instrument contact, then a cutting rule tied to the active cutting geometry and physical state.
-- Update topology, constraints, collision surfaces and UE render bindings together; retain deterministic reset and replay inputs.
-- Preserve a tensioned specimen across partial cuts and complete separation, with bounded solver cost and explicit failure reporting.
+## Cutting refinements beyond this milestone
 
-Completion requires a reproducible hold–tension–cut–release exercise. Tests should demonstrate that a cut changes connectivity, separated regions respond independently, inactive tools do not cut, render and collision surfaces remain consistent, and reset returns to the original specimen. Repeated cuts, boundary cuts, contact during topology changes and overload cases need their own regression coverage. The appropriate timestep and mesh resolution remain design decisions until measured.
+Finer incision geometry requires a justified resolution/performance budget or a more general sub-element remeshing strategy. Future work should examine membrane self-contact, more faithful bypass-scissor geometry, force-calibrated fracture behavior, general organ remeshing and biological material data. Each change needs renewed convergence, contact and topology validation. Visual smoothness alone is not physical resolution.
 
-Full-organ dissection, bleeding, thermal energy effects and general volumetric remeshing are outside this first cutting milestone.
+Full-organ dissection, bleeding and thermal energy effects remain outside the delivered training-membrane scope. The next major interaction milestone is needle and thread mechanics, developed independently before combining it with cut-edge approximation.
 
 ## Suturing: needle and thread mechanics — planned
 
@@ -81,4 +77,4 @@ No current numerical protection threshold should be presented as a clinical safe
 
 A milestone needs a playable exercise, an explained physical model, reproducible acceptance tests, reviewed screenshots or recordings, and a documented list of remaining limitations. A passing editor run is followed by packaged testing; relocation and a clean-machine/clean-checkout check provide different evidence and should be reported separately.
 
-The sequence above deliberately leaves implementation choices open where experiments are still needed. The current [README](../README.md), [physics reference](../Physics/README.md) and [build guide](BUILDING.md) describe what exists today; this roadmap describes work that remains.
+The current [README](../README.md), [Phase 3 specification](PHASE3.md) and [build guide](BUILDING.md) describe the implementation. Future milestones remain hypotheses to validate through physical measurements, software tests and user evaluation.
