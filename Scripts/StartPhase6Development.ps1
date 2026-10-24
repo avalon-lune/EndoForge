@@ -23,9 +23,15 @@ if ($Mode -eq 'Physics') {
     $Executable = Join-Path ([IO.Path]::GetFullPath($EngineRoot)) 'Engine/Binaries/Win64/UnrealEditor.exe'
     $Arguments = @($ProjectFile,'-LapPhase6',"-LapPhysicsPort=$PhysicsPort",("-LapAnatomyDir="+$Anatomy),'-d3d12')
     if ($Mode -eq 'Preview') { $Arguments += @('-game','-windowed','-ResX=1920','-ResY=1080') }
+    # UE parses values from its command line; quote the value after '=' for paths with spaces.
+    $LaunchArguments = @($Arguments | ForEach-Object {
+        if ($_.StartsWith('-LapAnatomyDir=')) { '-LapAnatomyDir="' + $Anatomy + '"' }
+        elseif ($_ -match '\s') { '"' + $_ + '"' }
+        else { $_ }
+    })
 }
 if ($DryRun) {
-    [ordered]@{mode=$Mode;executable=$Executable;arguments=$Arguments;repository=$RepositoryRoot;port=$PhysicsPort;launches_process=$false} | ConvertTo-Json -Depth 4
+    [ordered]@{mode=$Mode;executable=$Executable;arguments=$Arguments;command_line_arguments=$(if($Mode -eq 'Physics'){$null}else{$LaunchArguments});repository=$RepositoryRoot;port=$PhysicsPort;launches_process=$false} | ConvertTo-Json -Depth 4
     return
 }
 foreach ($Required in @($Executable,$ProjectFile,(Join-Path $Anatomy 'physics-mesh.json'),(Join-Path $Anatomy 'scene.json'))) {
@@ -42,6 +48,5 @@ if ($Mode -eq 'Physics') {
 } else {
     Write-Host 'Start -Mode Physics in a separate terminal. Full Editor mode uses normal in-process Play; Preview starts the game directly.'
     # Human-invoked editor/preview must be visible for interactive project work.
-    $QuotedArguments = @($Arguments | ForEach-Object { '"' + $_ + '"' })
-    Start-Process -FilePath $Executable -ArgumentList $QuotedArguments -WorkingDirectory $RepositoryRoot -WindowStyle Normal
+    Start-Process -FilePath $Executable -ArgumentList $LaunchArguments -WorkingDirectory $RepositoryRoot -WindowStyle Normal
 }
