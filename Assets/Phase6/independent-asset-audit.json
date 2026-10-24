@@ -1,0 +1,473 @@
+{
+  "dynamic_topology": {
+    "vertices": 23760,
+    "triangles": 33792,
+    "welded_vertices": 16898,
+    "boundary_edges_after_weld": 0,
+    "nonmanifold_edges_after_weld": 0,
+    "degenerate_triangles": 0,
+    "finite": true,
+    "minimum_area_m2": 1.125571013643514e-08
+  },
+  "dynamic_binding": {
+    "passed": true,
+    "max_offset_m": 0.00012000000000000362,
+    "cap_m": 0.00012,
+    "locked_neighborhood_max_offset_m": 0,
+    "fully_locked_triangle_count": 0,
+    "all_microtriangles_single_physical_parent": true,
+    "offset_bound_proof": "For each microtriangle, linear interpolation of its bounded vertex offsets lies within a convex Euclidean ball of radius cap; barycentrics interpolate inside the same parent triangle."
+  },
+  "static": [
+    {
+      "id": 200,
+      "topology": {
+        "vertices": 35760,
+        "triangles": 38144,
+        "welded_vertices": 19074,
+        "boundary_edges_after_weld": 0,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 2.8554985782099e-09
+      },
+      "binding": {
+        "passed": true,
+        "max_offset_m": 0.00012000000000001338,
+        "cap_m": 0.00012,
+        "locked_neighborhood_max_offset_m": 0.0,
+        "fully_locked_triangle_count": 1660,
+        "all_microtriangles_single_physical_parent": true,
+        "offset_bound_proof": "For each microtriangle, linear interpolation of its bounded vertex offsets lies within a convex Euclidean ball of radius cap; barycentrics interpolate inside the same parent triangle."
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 1.1739259324009862e-06,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "32ef9a57e6d91673a159976695f9175459cac1073724b0899017e066060e4e31"
+      }
+    },
+    {
+      "id": 300,
+      "topology": {
+        "vertices": 18721,
+        "triangles": 36864,
+        "welded_vertices": 18721,
+        "boundary_edges_after_weld": 576,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 9.74338660511748e-07
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 1.8520616977958718e-06,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "b90928cbdd0a770a6034092e14eb3427beb526111d49718458ea6a304daace9c"
+      }
+    },
+    {
+      "id": 301,
+      "topology": {
+        "vertices": 18193,
+        "triangles": 35840,
+        "welded_vertices": 18193,
+        "boundary_edges_after_weld": 544,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 3.710937843030063e-06
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 1.8352423173528823e-06,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "1df637c33816ee4c8f43fef800545f538cd5347b8f87dca2bbf61f48b2004469"
+      }
+    },
+    {
+      "id": 311,
+      "topology": {
+        "vertices": 42657,
+        "triangles": 84480,
+        "welded_vertices": 42657,
+        "boundary_edges_after_weld": 832,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 1.325757718430148e-06
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 1.7673126723640266e-06,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "d2c5038f3637508eadb1838d5f149de4eeca14666d31737707d9eba39ad14a6a"
+      }
+    },
+    {
+      "id": 310,
+      "topology": {
+        "vertices": 13065,
+        "triangles": 25600,
+        "welded_vertices": 13065,
+        "boundary_edges_after_weld": 528,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 5.273500354998382e-07
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 1.2228370099415289e-06,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "12c97a9aa852f6b3660b7387e87cd08e8996592d3a974a870caedcd1bd5a4aba"
+      }
+    },
+    {
+      "id": 400,
+      "topology": {
+        "vertices": 3106,
+        "triangles": 6208,
+        "welded_vertices": 3106,
+        "boundary_edges_after_weld": 0,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 6.74162821327551e-08
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 2.672100639407232e-07,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "1819e364390ebea89e42e7f2a4dcc6f98ac32b5ff84d9bb1f91a598bc2282c43"
+      }
+    },
+    {
+      "id": 401,
+      "topology": {
+        "vertices": 3106,
+        "triangles": 6208,
+        "welded_vertices": 3106,
+        "boundary_edges_after_weld": 0,
+        "nonmanifold_edges_after_weld": 0,
+        "degenerate_triangles": 0,
+        "finite": true,
+        "minimum_area_m2": 2.9506505874474203e-08
+      },
+      "fbx": {
+        "passed": true,
+        "version": 7400,
+        "vertex_max_error_cm": 3.1700009702898274e-07,
+        "triangles_exact_after_handedness": true,
+        "node_scale": [
+          1,
+          1,
+          1
+        ],
+        "sha256": "c5683b4d1f1827eefc0a88194056dd127846f362d604c968612269b4332823a5"
+      }
+    }
+  ],
+  "textures": [
+    {
+      "file": "textures/GallbladderSerosa_base.png",
+      "size": [
+        4096,
+        4096
+      ],
+      "sha256": "952cbdf151f16cfe79a990eccb5595ac9e82c5b34e15367fab66e5e2a70f3a5f",
+      "passed": true
+    },
+    {
+      "file": "textures/GallbladderSerosa_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "8f8240cf9692f712ecf9829ec0bc795f0143c8ea529cdd57dd6f0e6e328f46c2",
+      "passed": true
+    },
+    {
+      "file": "textures/GallbladderSerosa_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "87b52bbcb9897ed573e686963315b9e5beec27d62891a19d07e07aafffbcddc5",
+      "passed": true
+    },
+    {
+      "file": "textures/HepaticCapsule_base.png",
+      "size": [
+        4096,
+        4096
+      ],
+      "sha256": "aaebf8aa9a50eac905e6425cc2e296df82efea42db4f24519a1b4b235eb935e9",
+      "passed": true
+    },
+    {
+      "file": "textures/HepaticCapsule_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "4704e42d6d6214fbe27278162d18bb71d6e8c8a6dfad116d3959c777b07c0b1b",
+      "passed": true
+    },
+    {
+      "file": "textures/HepaticCapsule_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "8050504d5b28f42b9a0b57e28f4b6d54412b9ae7225b0369f5ac4f0071147e5b",
+      "passed": true
+    },
+    {
+      "file": "textures/PeritonealLining_base.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "ed6295e4b793cbef698df8ea23084a8470a7cc87c57bfa16ecf4f80433a7f4e4",
+      "passed": true
+    },
+    {
+      "file": "textures/PeritonealLining_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "b77d6b62ac01ab89b7311d343235474db1ffa19ab49da46791147ef39d641b1f",
+      "passed": true
+    },
+    {
+      "file": "textures/PeritonealLining_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "a9862539a103bd9b8718a8b11c666f7fcd92433424dbc0e531433939ec43408c",
+      "passed": true
+    },
+    {
+      "file": "textures/OmentalFat_base.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "896535870a86e939247d67a93f65394289d098f599643d2a40a805ffbc2f94a0",
+      "passed": true
+    },
+    {
+      "file": "textures/OmentalFat_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "e2db80126bbbcc17a59e67e1f8bfadde81635a5ccf9caf0c5fdea6200d694c46",
+      "passed": true
+    },
+    {
+      "file": "textures/OmentalFat_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "b3b5cd71d2bef1e98dca35eda2f96b18bf438d62dc4d6933b5c1786d93989245",
+      "passed": true
+    },
+    {
+      "file": "textures/HepaticBedConnective_base.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "44078f0d78468564c12d7aea1627ee3f9ac6a5bfd7a74300678ad40b312c6483",
+      "passed": true
+    },
+    {
+      "file": "textures/HepaticBedConnective_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "ec3cf8737c791e2c5d4d323ab02846c0cc31d8eb813273693170088ee5df5feb",
+      "passed": true
+    },
+    {
+      "file": "textures/HepaticBedConnective_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "cbd34f81710cfc9e9427a4695f2d279885827b25051260a4aa82aef4bf603b86",
+      "passed": true
+    },
+    {
+      "file": "textures/BiliaryDuct_base.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7a072aefb828a0248786d14f689fcf1c9faf477f3c3b36b740e627d19a2250c1",
+      "passed": true
+    },
+    {
+      "file": "textures/BiliaryDuct_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "aaeb222decea259c527c0ce4b77f462406b51c625883dfd0e2d4ec55615accb8",
+      "passed": true
+    },
+    {
+      "file": "textures/BiliaryDuct_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "ce8695d3528d1629efb1d883e2cb253f54d0a5342d7f6bb3d1592a5a953aa98f",
+      "passed": true
+    },
+    {
+      "file": "textures/ArterialLandmark_base.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "b9a9848f6a24286a787882785074fe416face1ff64af272da47ad7fd6d4064b1",
+      "passed": true
+    },
+    {
+      "file": "textures/ArterialLandmark_roughness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "0dee313dd346c6d5cbd042796688306a34f1a7b92b790714fc816d8fcf9da76b",
+      "passed": true
+    },
+    {
+      "file": "textures/ArterialLandmark_normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "ede73623d39713e0ad5becd585c3a3916b24fcdad7a0eef461d2284f1f8f41c7",
+      "passed": true
+    }
+  ],
+  "preservation": {
+    "core_fields": [
+      "schema",
+      "model_id",
+      "units",
+      "vertices_m",
+      "triangles",
+      "normals",
+      "uvs",
+      "thickness_m",
+      "fixed_vertex_ids",
+      "attachment_vertex_ids",
+      "attachment_anchor_positions_m",
+      "grasp_targets_m",
+      "provenance",
+      "clinical_material_validated",
+      "attachment_anchor_bindings",
+      "hepatic_bed"
+    ],
+    "previous_physics_sha256": "2a10b1f0a19888e011fec356d77d0debae753ada15bd5cd05159d78f7fcffa16",
+    "protected_full_triangle_count": 1538,
+    "protected_vertices": 787,
+    "scope": "Every full triangle with a vertex within30mm of an original gallbladder vertex, plus all bound hepatic-bed anchor triangles. Remote liver shape and authored interaction rig are versioned changes."
+  },
+  "schema": "endoforge.phase6.independent-asset-audit.v1",
+  "passed": true,
+  "checks": {
+    "gallbladder_fem_and_attachment_values_preserved": true,
+    "whole_operative_liver_triangles_preserved": true,
+    "dynamic_base_triangles_preserved": true,
+    "original_model_identity": true,
+    "dynamic_closed_nondegenerate": true,
+    "dynamic_bound": true,
+    "liver_collision_unchanged": true,
+    "liver_bound_and_bed_locked": true,
+    "liver_closed_after_weld": true,
+    "fbx_200": true,
+    "topology_200": true,
+    "fbx_300": true,
+    "topology_300": true,
+    "fbx_301": true,
+    "topology_301": true,
+    "fbx_311": true,
+    "topology_311": true,
+    "fbx_310": true,
+    "topology_310": true,
+    "fbx_400": true,
+    "topology_400": true,
+    "fbx_401": true,
+    "topology_401": true,
+    "GallbladderSerosa_base_color_texture": true,
+    "GallbladderSerosa_roughness_texture": true,
+    "GallbladderSerosa_normal_texture": true,
+    "HepaticCapsule_base_color_texture": true,
+    "HepaticCapsule_roughness_texture": true,
+    "HepaticCapsule_normal_texture": true,
+    "PeritonealLining_base_color_texture": true,
+    "PeritonealLining_roughness_texture": true,
+    "PeritonealLining_normal_texture": true,
+    "OmentalFat_base_color_texture": true,
+    "OmentalFat_roughness_texture": true,
+    "OmentalFat_normal_texture": true,
+    "HepaticBedConnective_base_color_texture": true,
+    "HepaticBedConnective_roughness_texture": true,
+    "HepaticBedConnective_normal_texture": true,
+    "BiliaryDuct_base_color_texture": true,
+    "BiliaryDuct_roughness_texture": true,
+    "BiliaryDuct_normal_texture": true,
+    "ArterialLandmark_base_color_texture": true,
+    "ArterialLandmark_roughness_texture": true,
+    "ArterialLandmark_normal_texture": true
+  },
+  "physical_asset_sha256": "6d116d2752664ae4af3b638eee91c2be11f7ce22502091d147e1c6266ac3a37d",
+  "scene_sha256": "27fddf1e46e2058d242f388773fe3abc93a307584023ac17c300ddff7fcde40d",
+  "ue_import_verification": "separate runtime gate; this checks authored FBX payload, not UE imported transforms"
+}

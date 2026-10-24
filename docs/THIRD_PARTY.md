@@ -44,6 +44,8 @@ The service dynamically links the SOFA libraries. Build instructions and pinned 
 
 ## Project assets and project license
 
-The training pad, instrument geometry, materials, and map in this baseline are created by the project's procedural code/scripts. They are engineering demonstration assets, not patient scans or imported anatomical datasets. UE's engine content remains part of the separately installed engine.
+The training pad, instrument geometry, materials, and map are created by the project's procedural code/scripts. The original Phase 5 and Phase 6 Blender scenes, exported meshes, textures and anatomy definitions are included with their authoring scripts. These are engineering demonstration assets, not patient scans or clinically certified anatomical models. UE's engine content remains part of the separately installed engine.
+
+Tutor-provided medical imagery, anatomy reference archives and research requirement documents under the local `source/` directory are not republished. Those references informed development direction; this repository does not redistribute their meshes or grant rights to those source materials. The public screenshots show the project's synthetic simulation scene. Project author and maintainer: Avalon (`avalon-lune`).
 
 This document records third-party provenance. It does not assign an MIT license, or any other project-wide license, to the project's original source or assets. Third-party license names above apply to those dependencies.

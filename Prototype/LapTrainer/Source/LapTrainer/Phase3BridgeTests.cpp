@@ -12,6 +12,7 @@ bool FPhase3BridgeProtocolTest::RunTest(const FString& Parameters)
 {
     USimulationBridge* Bridge = NewObject<USimulationBridge>();
     Bridge->AddToRoot();
+    Bridge->ExpectedProtocol = 3;
     // Two connected triangles. Physical splits may increase the vertex count while
     // retaining all faces; malformed packets must never commit half of that change.
     const FString Base = TEXT(R"JSON({"type":"state","vertices":[[0,0,0],[0.01,0,0],[0,0.01,0],[0.01,0.01,0]],"triangles":[[0,1,2],[1,3,2]],"topology_revision":0,"cut_count":0,"component_count":1,"cut_length_m":0,"step_ms":1,"max_displacement_m":0,"reset_id":0,"healthy":true,"safety_stops":0,"message":"test","tools":[]})JSON");

@@ -1,0 +1,168 @@
+{
+  "schema": "endoforge.phase6.acceptance.v1",
+  "phase": 6,
+  "status": "required_gates_not_claimed_as_passed",
+  "scope": "Common interactive, visual and data foundation; no Project 1/2 specialized dataset, suturing or clinical calibration",
+  "preservation": {
+    "baseline": "tmp/phase6/preserved-baseline.json",
+    "exact_membership_and_sha256": true
+  },
+  "interaction": {
+    "input_path": "Actual packaged PlayerController keyboard/mouse events accepted by the native service and returned to UE",
+    "latency_definition": "Local input event to accepted native state received in UE; not hardware motion-to-photon latency",
+    "response_p95_ms_maximum": 150,
+    "target_lead_mm_maximum": 1,
+    "stop_residual_travel_mm_maximum": 1,
+    "coverage": [
+      "both tools",
+      "precision/default/fast movement",
+      "mouse and keyboard",
+      "start/stop/reverse",
+      "reset/release",
+      "workspace approach/grasp/traction/retraction"
+    ],
+    "collision_maximum_depth_mm": 0.15,
+    "collision_scope": "Recorded finite paths, whole physical faces plus interpolation; report tested and unimplemented collision pairs explicitly"
+  },
+  "visual": {
+    "original_editable_blender_assets": true,
+    "higher_detail_geometry_than_phase5": true,
+    "finite_mesh_coordinates_and_valid_indices": true,
+    "physical_scale_preserved": true,
+    "visual_physics_binding": "Disclose actual mapping and maximum displacement; no visually detached contact. Actual rendered triangles drive depth/normal/ID labels.",
+    "manual_review_views": [
+      "whole workspace",
+      "gallbladder/liver attachment close-up",
+      "jaw contact close-up",
+      "dual traction"
+    ],
+    "anatomy_and_appearance_review": "Engineering visual inspection recorded separately; tutor/clinician approval not implied"
+  },
+  "rendering": {
+    "actual_rhi": "D3D12",
+    "actual_shader_model": "SM6",
+    "lumen_gi": true,
+    "lumen_reflections": true,
+    "hardware_ray_tracing": true,
+    "lumen_hardware_ray_tracing": true,
+    "high_quality_near_shadows": true,
+    "feature_evidence": "Runtime cvars plus actual engine RHI/hardware RT initialization logs and controlled same-state images: full, GI disabled, reflections disabled, shadows disabled. Save active settings/camera/state identity and image SHA256. No pass from config alone.",
+    "measurement": "GPU timing and renderer costs where available; distinguish unavailable measurements from zero load. GPU utilization is diagnostic, not a target to maximize for its own sake."
+  },
+  "performance": {
+    "width": 1920,
+    "height": 1080,
+    "display_mean_fps_minimum": 30,
+    "display_target_fps": 60,
+    "simulation_to_wall_ratio_minimum": 0.95,
+    "exclude_capture_freeze_seconds": true,
+    "report": [
+      "display mean FPS",
+      "display P95 frame time",
+      "native mean/P95 step time",
+      "simulation/wall progression",
+      "GPU timing availability",
+      "active rendering settings"
+    ],
+    "no_concurrent_acceptance_workloads": true
+  },
+  "physics": {
+    "both_friction_grips_and_meaningful_traction": true,
+    "base_native_regression_cases": 20,
+    "long_hold": {
+      "additional_cases": 15,
+      "hold_steps_per_stage": 1800,
+      "time_step_s": 0.03333333333333333,
+      "hold_seconds_per_stage": 60,
+      "stages": [
+        "stationary grasp",
+        "loaded traction hold",
+        "closed loaded retraction",
+        "release"
+      ],
+      "pose_offset_m": 0.0001,
+      "single_increment_minimum_m": 0.0005,
+      "dual_increment_minimum_m": 0.0015,
+      "controller_implementation": "phase6-bilateral-load-latch-v1",
+      "controller_parameters": {
+        "grasp_post_contact_gap_stroke_m": 0.0,
+        "grasp_post_contact_closure_rate_deg_s": 40.0,
+        "grasp_acquisition_minimum_inner_normal_n": 0.03,
+        "grasp_acquisition_minimum_total_inner_normal_n": 0.06
+      },
+      "all_steps_retained_healthy_finite_and_native_penetration_bounded": true,
+      "independent_whole_surface_geometry_cases": [
+        "tool0-nominal",
+        "tool1-nominal",
+        "dual-2mm"
+      ],
+      "scope": "Additional to all 20 regression cases. Both nominal tool poses, independent +/-0.1 mm XYZ offsets for each tool, and dual 2 mm traction. Every raw state retained and checked; whole-face/interpolated geometry additionally audits the three nominal traces. Offset cases are not claimed as independently swept geometry. Offline correctness timings are not interactive throughput. The jaw angle at bilateral load acquisition is latched mechanically; no force servo or added grasp spring. Recipes use each authored trocar and roll; these replace the failed reflected-tip fixture without relaxing hold, deformation, health or collision thresholds.",
+      "nominal_rest_ready_tips_m": [
+        [
+          0.00063533,
+          -0.02874511,
+          0.02155308
+        ],
+        [
+          0.003044376,
+          0.015659817,
+          0.022760653
+        ]
+      ]
+    },
+    "hepatic_bed_attachment_and_fixed_neck": true,
+    "finite_state_and_positive_elements": true,
+    "safety_stops_maximum": 0,
+    "endurance_simulation_seconds_minimum": 600,
+    "endurance_cycles_minimum": 30,
+    "fresh_process_replay_runs": 5,
+    "replay_node_rms_tolerance_mm": 0.5,
+    "replay_events_identical": true,
+    "replay_note": "Report actual largest single-node and force differences; no bit-identical or clinically calibrated force claim.",
+    "operating_matrix": "Three roll offsets -15/0/+15 degrees relative to each authored tool recipe, crossed with 6/12/18 mm/s straight/lateral/forward paths. The historical matrix case labels 75/90/105 encode offset+90, not a common absolute jaw roll.",
+    "adaptive_numerics": {
+      "maximum_node_travel_per_substep": "authored wall thickness",
+      "maximum_accepted_constraint_residual": 1e-05,
+      "retry_state": "rebuild contact graph from saved mechanical state",
+      "substep_counts": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "coarsening_cooldown_frames": 8,
+      "contact_compliance_regularization": 0.0,
+      "solver": "SOFA NNCG"
+    }
+  },
+  "data": {
+    "sequences_minimum": 2,
+    "states_per_sequence_minimum": 12,
+    "eye_width": 640,
+    "eye_height": 512,
+    "same_frozen_state": true,
+    "fields": [
+      "RGB",
+      "Z depth in mm",
+      "geometric world normals",
+      "object IDs",
+      "validity mask",
+      "actual rendered geometry",
+      "intrinsics/extrinsics",
+      "time/state/model/material identities"
+    ],
+    "independent_ray_depth_max_error_mm": 0.01,
+    "independent_ray_normal_max_error": 0.001,
+    "invalid_pixels_and_temporal_effects": "Explicitly record validity exclusions; no selective rejection based on error. Data captures must specify anti-aliasing, temporal accumulation, exposure and distortion behavior."
+  },
+  "delivery": {
+    "directory": "output/Phase6/",
+    "fresh_candidate": true,
+    "exact_binary_source_asset_hashes": true,
+    "archive_crc_and_sha256": true,
+    "fresh_extraction_launch_and_data_audit": true,
+    "prior_deliveries_preserved": true,
+    "final_receipt_requires_all_gates": true
+  }
+}

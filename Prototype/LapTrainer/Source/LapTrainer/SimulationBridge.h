@@ -20,11 +20,15 @@ struct FLapToolCommand
     FVector TipCm = FVector::ZeroVector;
     bool bClosed = false;
     float RollDeg = 90.0f;
+    bool bHoldTip = false;
+    bool bHoldRoll = false;
+    bool bBoundedTarget = false;
 };
 
 struct FLapToolState
 {
     FVector ActualTipCm = FVector::ZeroVector;
+    FVector PivotCm = FVector::ZeroVector;
     float RollDeg = 90.0f;
     float JawOpenFraction = 1.0f;
     bool bGrasping = false;
@@ -34,6 +38,12 @@ struct FLapToolState
     float PenetrationMm = 0;
     float SlipDistanceMm = 0;
     FString GripState = TEXT("open");
+    bool bMotionBlocked = false;
+    FString MotionGuardReason;
+    double MotionAcceptedFraction = 1;
+    double MotionClearanceMm = 0;
+    int32 MotionWitnessTriangle = -1;
+    int32 MotionGuardWorkCount = 0;
     TArray<FLapJawPose> JawPoses;
 };
 
@@ -44,8 +54,37 @@ class LAPTRAINER_API USimulationBridge : public UObject
     GENERATED_BODY()
 public:
     void InitializeBridge();
+    bool IsPhase4() const { return ExpectedProtocol >= 4; }
+    bool IsPhase5() const { return ExpectedProtocol == 5; }
+    const TSharedPtr<FJsonObject>& GetModelMetadata() const { return ModelMetadata; }
+    void SetSpecimen(const FString& Name) { RequestedSpecimen = Name; }
+    void RequestSessionAction(const FString& Action);
+    FString GetSpecimen() const { return Specimen; }
+    FString GetSessionMode() const { return SessionMode; }
+    FString GetPendingSessionAction() const { return HasPendingSessionAction() ? PendingSessionAction : FString(); }
+    FString GetSessionError() const { return SessionError; }
+    bool IsReplayLocked() const { return SessionMode == TEXT("replaying") || SessionMode == TEXT("replay_complete") || PendingSessionAction == TEXT("replay_last"); }
+    bool HasPendingSessionAction() const { return PendingActionId > AcknowledgedActionId; }
+    uint64 GetStateId() const { return NativeStateId; }
+    uint64 GetSimulationId() const { return SimulationId; }
+    uint64 GetStepIndex() const { return StepIndex; }
+    uint64 GetReplayLength() const { return ReplayLength; }
+    uint64 GetRecordedSteps() const { return RecordedSteps; }
+    double GetNativeTime() const { return NativeTime; }
+    int32 GetAcknowledgedResetId() const { return AcknowledgedResetId; }
+    const TSharedPtr<FJsonObject>& GetAcceptedState() const { return AcceptedState; }
+    const TArray<int32>& GetNodeIds() const { return NodeIds; }
+    const TArray<int32>& GetMaterialIds() const { return MaterialIds; }
     void TickBridge(float DeltaSeconds, const FVector& ToolTipCm, bool bClosed, bool bReset, float RollDeg = 0.0f);
+    void TickFrozenBridge();
     void TickDualBridge(float DeltaSeconds, const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bReset);
+    // Phase 6 presentation freezes must not resume performance/input on queued,
+    // pre-freeze feedback. Ordinary bridge ticks drain until a post-freeze command
+    // is acknowledged by a newly accepted authoritative state.
+    bool IsFrozenResumePending() const { return bPhase6Commands && bFrozenResumePending; }
+    uint64 GetFrozenResumeFenceSequence() const { return FrozenResumeFenceSequence; }
+    uint64 GetAppliedCommandSequence() const { return AppliedCommandSequence; }
+    uint64 GetQueuedCommandSequence() const { return CommandSequence; }
     const FLapToolState* GetToolState(int32 Index) const { return HasToolState() && ToolStates.IsValidIndex(Index) ? &ToolStates[Index] : nullptr; }
     uint64 GetTopologyRevision() const { return TopologyRevision; }
     uint64 GetSafetyStopCount() const { return SafetyStopCount; }
@@ -80,15 +119,30 @@ public:
     virtual void BeginDestroy() override;
 private:
     friend class FPhase3BridgeProtocolTest;
+    friend class FPhase4BridgeProtocolTest;
+    int32 ExpectedProtocol = 4;
+    bool bPhase6Commands = false;
+    FString RequestedSpecimen = TEXT("flat"), Specimen = TEXT("flat");
+    FString SessionMode = TEXT("idle"), SessionError, PendingSessionAction;
+    uint64 PendingActionId = 0, AcknowledgedActionId = 0;
+    uint64 NativeStateId = 0, SimulationId = 0, StepIndex = 0, ReplayLength = 0, RecordedSteps = 0;
+    double NativeTime = 0;
+    TArray<int32> NodeIds, MaterialIds;
+    FString ConfigSignature;
+    uint64 NativeFrame = 0;
+    TSharedPtr<FJsonObject> AcceptedState;
+    TSharedPtr<FJsonObject> ModelMetadata;
+    FString ModelSignature;
     void TryConnect();
     void Disconnect(const FString& Reason);
     void ReceiveMessages();
+    void CheckFrozenResumeFence();
     void HandleMessage(const FString& Line);
     void QueueCommand(const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bPermitClosure);
     void RecordTelemetry();
     void FlushTelemetry();
     FSocket* Socket = nullptr;
-    int32 PhysicsPort = 47323;
+    int32 PhysicsPort = 47325;
     TArray<FLapToolState> ToolStates;
     TArray<FLapToolCommand> LastCommands;
     int32 LastActiveTool = 0;
@@ -107,6 +161,10 @@ private:
     double ConnectStartedSeconds = 0;
     uint64 MeshRevision = 0;
     uint64 CommandSequence = 0;
+    uint64 AppliedCommandSequence = 0;
+    uint64 FrozenResumeFenceSequence = 0, FrozenResumeAfterStateId = 0;
+    double FrozenResumeFenceSeconds = 0;
+    bool bFrozenResumePending = false;
     uint64 UnhealthyStateCount = 0;
     uint64 RejectedStateCount = 0;
     int32 ResetId = 0;

@@ -1,0 +1,20 @@
+{
+  "schema": "endoforge.hepatic-bed-generation.v2",
+  "liver": {
+    "vertices": 1194,
+    "triangles": 2384,
+    "closed_oriented": true,
+    "signed_volume_m3": 0.0012823189770943843
+  },
+  "anchor_count": 31,
+  "max_anchor_surface_distance_m": 0.0,
+  "outer_wall_minimum_surface_clearance_m": 0.0009362494108042641,
+  "candidate_triangle_pairs": 4988,
+  "maximum_local_patch_edge_m": 0.002183119092090648,
+  "candidate_path": "E:\\Medical Image Visualization and Analysis\\tmp\\phase5\\physics-mesh-v2-candidate.json",
+  "rest_triangle_intersections": 0,
+  "rest_wall_vertices_inside_liver": 0,
+  "maximum_winding_integer_error": 8.393130409417613e-17,
+  "frozen_gallbladder_exact": true,
+  "canonical_physics_sha256": "2a10b1f0a19888e011fec356d77d0debae753ada15bd5cd05159d78f7fcffa16"
+}

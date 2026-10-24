@@ -1,0 +1,45 @@
+{
+  "schema": "endoforge.public-verification-summary.v1",
+  "phase": 4,
+  "project_author": "Avalon",
+  "kind": "Derived summary of preserved local receipts; not a new test run.",
+  "deliveries": [
+    {
+      "local_receipt": "output/Phase4/archive-relocation-verification.json",
+      "receipt_sha256": "ead6a5bf47f74532acee99375561368cfb35044984976c614f8076ce5106659c",
+      "receipt_fields": {
+        "phase": 4,
+        "passed": true,
+        "archive_sha256": "b9b4c1bfe754d473d7eef855e96fc0fa997a08062f6f356cbbb841a2ff7102c2",
+        "archive_bytes": 490627716,
+        "extracted_package": "output/verification/phase4-relocated-final-extracted/EndoForge",
+        "verified_manifest_files": 264,
+        "packaged_run_directory": "output/verification/phase4-relocated-final",
+        "physics_exe_sha256": "e947dcce04b59184be5247cd88341c65ab2478f3d92ac8f92bb2c2a38f8c42b3",
+        "game_exe_sha256": "32c343a33f1eb1ee0c64ab91a49a3616454e31ff194c0bbd2fbc382e9e116ba1",
+        "tested_at_utc": "2026-10-17T08:25:12.4251686Z",
+        "isolated_process_path": true,
+        "path_scope": "SystemRoot, System32, WindowsPowerShell/v1.0 only; inherited by package launcher and child processes. Installed system runtimes remain available.",
+        "sofa_environment_variables_cleared": []
+      }
+    },
+    {
+      "local_receipt": "output/Phase4-CollisionFix/archive-relocation-verification.json",
+      "receipt_sha256": "ab47e9a44112136e9325d9532618441e1dbaa13ea7eed2d0c195d6f0a6d6d964",
+      "receipt_fields": {
+        "phase": 4,
+        "delivery_variant": "Phase4-CollisionFix",
+        "passed": true,
+        "archive_sha256": "35f76a91e8f96e5b3b1b84aad20399b1060147490d6358133fd5b8c0754f5cec",
+        "archive_bytes": 683823822,
+        "extracted_package": "output/verification/phase4-collision-relocated-final-extracted/EndoForge",
+        "verified_manifest_files": 311,
+        "packaged_run_directory": "output/verification/phase4-collision-relocated-final",
+        "physics_exe_sha256": "0644da8a53bc7b7e8aaec45d6be7176ef8e8e6c471e58d8ba19f4f48f11f1a6a",
+        "game_exe_sha256": "311daa219d814df34812c48c875a90ac4711d9103103352e6512c24276fb9509",
+        "tested_at_utc": "2026-10-17T15:40:22.8044502Z"
+      }
+    }
+  ],
+  "scope": "Flat and curved engineering specimens; finite recorded paths. Collision correction is a separate preserved delivery. No clinical validation."
+}

@@ -1,4 +1,4 @@
-﻿param(
+param(
     [switch]$LapAutoExit,
     [switch]$LapPhase3Test,
     [string]$LapCaptureDir = ''
@@ -35,7 +35,7 @@ try {
     $PhysicsStdout = Join-Path $LogDirectory ($RunStamp + '-physics.stdout.log')
     $PhysicsStderr = Join-Path $LogDirectory ($RunStamp + '-physics.stderr.log')
     Write-Host 'Starting local Phase 3 tissue physics...'
-    $PhysicsProcess = Start-Process -FilePath $PhysicsExecutable -WorkingDirectory (Split-Path -Parent $PhysicsExecutable) -ArgumentList @('--port', "$PhysicsPort") -WindowStyle Hidden -RedirectStandardOutput $PhysicsStdout -RedirectStandardError $PhysicsStderr -PassThru
+    $PhysicsProcess = Start-Process -FilePath $PhysicsExecutable -WorkingDirectory (Split-Path -Parent $PhysicsExecutable) -ArgumentList @('--phase3','--port', "$PhysicsPort") -WindowStyle Hidden -RedirectStandardOutput $PhysicsStdout -RedirectStandardError $PhysicsStderr -PassThru
     Write-Host ("Physics process ID: {0}" -f $PhysicsProcess.Id)
     $ReadyDeadline = [DateTime]::UtcNow.AddSeconds(45)
     $Ready = $false
@@ -61,7 +61,7 @@ try {
     }
     if (-not $Ready) { throw "SOFA did not become ready within 45 seconds. See $PhysicsStdout and $PhysicsStderr" }
     $GameLog = Join-Path $LogDirectory ($RunStamp + '-trainer.log')
-    $TrainerArguments = @('-windowed', '-d3d11', '-LapPhysicsPort=47323', '-ResX=1600', '-ResY=900', ('-abslog="' + $GameLog + '"'))
+    $TrainerArguments = @('-windowed', '-d3d11', '-LapPhase3', '-LapPhysicsPort=47323', '-ResX=1600', '-ResY=900', ('-abslog="' + $GameLog + '"'))
     if ($LapAutoExit) { $TrainerArguments += '-LapAutoExit' }
     if ($LapPhase3Test) { $TrainerArguments += '-LapPhase3Test' }
     if ($LapCaptureDir) {

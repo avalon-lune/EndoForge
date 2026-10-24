@@ -69,26 +69,34 @@ $sdkVersion = [regex]::Match([IO.File]::ReadAllText($vcxproj), '<WindowsTargetPl
 if (-not $sdkVersion) { throw 'Cannot read Windows SDK version from the generated Visual Studio project.' }
 $exePath = Join-Path $runtime 'LapPhysics.exe'
 $exeInfo = Get-Item -LiteralPath $exePath
-foreach ($compiledSource in @('main.cpp','Phase2Model.h','Phase3Model.h')) {
+foreach ($compiledSource in @('main.cpp','Phase2Model.h','Phase3Model.h','Phase4Session.h','Phase4Tests.h','Phase4CollisionTests.h','AnatomyAsset.h','Phase5Intersection.h','Phase5Tests.h','Phase6FEM.h','Phase6ReadyRecipes.h','Phase6ToolCollision.h','Phase6Tests.h')) {
     if ((Get-Item -LiteralPath (Join-Path $PSScriptRoot $compiledSource)).LastWriteTimeUtc -gt $exeInfo.LastWriteTimeUtc) {
         throw "Source $compiledSource is newer than LapPhysics.exe. Rebuild before writing build metadata."
     }
 }
 $sourceHashes = [ordered]@{}
-foreach ($sourceName in @('main.cpp','Phase2Model.h','Phase3Model.h','CMakeLists.txt','test_network.py','test_phase3_network.py','RunPhase3Regression.ps1')) {
+foreach ($sourceName in @('main.cpp','Phase2Model.h','Phase3Model.h','Phase4Session.h','Phase4Tests.h','Phase4CollisionTests.h','AnatomyAsset.h','Phase5Intersection.h','Phase5Tests.h','Phase6FEM.h','Phase6ReadyRecipes.h','Phase6ToolCollision.h','Phase6Tests.h','Phase6ToolCollisionTests.cpp','test_phase6_tool_guard.py','test_phase6_tool_guard_suite.py','CMakeLists.txt','test_network.py','test_phase3_network.py','test_phase4_network.py','test_phase5_network.py','test_phase5_assets.py','test_phase5_replay_fixture.py','test_phase6_latency.py','run_phase6_regression.py','summarize_phase5_tests.py','RunPhase3Regression.ps1','RunPhase4Regression.ps1','build.ps1','stage-runtime.ps1','configs/flat.json','configs/curved.json','../Assets/Phase5/physics-mesh.json')) {
     $sourceHashes[$sourceName] = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $sourceName) -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dependencies.json') -Raw | ConvertFrom-Json
+$sourceHashes['compare_phase6_recorded_profiles.py'] = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'compare_phase6_recorded_profiles.py') -Algorithm SHA256).Hash.ToLowerInvariant()
+$sourceHashes['run_phase6_long_hold.py'] = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'run_phase6_long_hold.py') -Algorithm SHA256).Hash.ToLowerInvariant()
 $sofaDependency = $manifest.dependencies | Where-Object name -eq 'SOFA Windows SDK' | Select-Object -First 1
 $buildInfo = [ordered]@{
-    phase = 3; protocol = 3; tested_protocol = $null
+    phase = 6; execution_modes = @('phase3','phase4','phase5','phase6'); protocol = 5; supported_protocols = @(3,4,5); tested_protocol = $null
     sofa_version = $sofaDependency.version; sofa_commit = $sofaDependency.source_commit
     compiler = "MSVC $compilerVersion"; windows_sdk = $sdkVersion
     cmake = $compilerMetadata.Directory.Name; build_configuration = 'Release x64'
     source_sha256 = $sourceHashes['main.cpp']; source_files_sha256 = $sourceHashes
     executable_sha256 = (Get-FileHash -LiteralPath $exePath -Algorithm SHA256).Hash.ToLowerInvariant()
     built_at_utc = $exeInfo.LastWriteTimeUtc.ToString('o'); staged_at_utc = [DateTime]::UtcNow.ToString('o')
-    verification_status = 'not run by this staging operation; run RunPhase3Regression.ps1'
+    verification_status = 'not run by this staging operation; run phase-specific regression tests'
 }
 $buildInfo | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $runtime 'build-info.json') -Encoding UTF8
 Write-Host "Staged $($seen.Count) application and library files into $runtime"
+
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'configs') -Destination $runtime -Recurse -Force
+New-Item -ItemType Directory -Force (Join-Path $runtime 'assets') | Out-Null
+Copy-Item -LiteralPath (Join-Path $project 'Assets/Phase5/physics-mesh.json') -Destination (Join-Path $runtime 'assets/phase5.json') -Force
+
+if (Test-Path -LiteralPath (Join-Path $project 'Assets/Phase6/physics-mesh.json')) { Copy-Item -LiteralPath (Join-Path $project 'Assets/Phase6/physics-mesh.json') -Destination (Join-Path $runtime 'assets/phase6.json') -Force }

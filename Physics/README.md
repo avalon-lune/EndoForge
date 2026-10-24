@@ -1,6 +1,61 @@
+# Phase 5: gallbladder mechanics and bounded replay
+
+Use `LapPhysics.exe --phase5 --port 47327 --mesh <absolute physics-mesh.json> --session-dir <absolute directory> --exit-after-client` for the anatomical scene. The default invocation remains protocol 4 for existing specimens. Phase 5 loads the immutable authored asset and binds the recording to its fingerprint, version and full physical configuration; mismatches fail closed.
+
+The gallbladder uses a closed, 1.1 mm thick tetrahedral wall (532 nodes, 1,584 tetrahedra), a fixed neck, and 31 elastic connections from the outer wall to actual barycentrically bound liver triangles. Both instruments are frictional graspers. The accepted nine-case operating matrix uses 2 mm traction per tool; longer or asymmetric motion can slip naturally. The liver is fixed, and full shaft/organ self-contact, fluid pressure, injury prediction, organ cutting and suturing are outside this stage. See [the Phase 5 specification](../docs/PHASE5.md) for data and rendering semantics.
+
+Replay preserves accepted-step commands and immutable identities. Its pre-agreed numerical criterion is a maximum per-frame node RMS difference of 0.5 mm and identical grip events; it does not promise bitwise identity or identical force samples across processes. The retained five-process fixture measured up to 0.0874461 mm node RMS, 0.176443 mm single-node difference and 0.0129292 N contact-load difference, with all 587 grip-state events matching. A tiny first-contact numerical difference can affect the load-responsive closure by one 0.6-degree update. SOFA's address-ordered force-field matrix accumulation is a candidate source, not an experimentally established sole cause. The prior stricter test failure and independent diagnosis remain in verification evidence.
+
+`test_phase5_network.py --output <new directory>` tests actual TCP control and persisted playback. `test_phase5_replay_fixture.py --actions <actions.json> --output <new directory> --repeats 5` verifies a fixed recorded trajectory in five fresh native processes, retaining all received states. `summarize_phase5_tests.py` binds the accepted native reports and their trajectories to the executable and source hashes. The delivery's verification index determines acceptance; build success alone does not.
+
+# Phase 4: configurable deformation, replay and state provenance
+
+The default `LapPhysics.exe` serves protocol **4** on localhost **47325**. The mechanics below remain a thin tetrahedral FEM layer with physical jaw contact and mesh-edge cutting. Phase 4 adds a flat specimen, a 12 mm sinusoidally curved specimen, bounded configuration, deterministic accepted-step action playback and full physics snapshots. It does not add suturing or anatomical validation.
+
+## Run and verify
+
+```powershell
+# From the repository root; configuration and session paths should be absolute.
+& ./Physics/build.ps1
+& ./Physics/RunPhase4Regression.ps1
+& ./Physics/runtime/LapPhysics.exe --specimen curved --session-dir "E:/my-session-directory" --exit-after-client
+```
+
+`--config <absolute JSON>` loads an effective specimen configuration; supplied presets are in `Physics/configs/flat.json` and `curved.json`. The launcher supplies a session directory. `--exit-after-client` flushes any active recording and exits successfully when its client disconnects. Without it, the service waits for another client. No existing unrelated service is stopped.
+
+`RunPhase4Regression.ps1` verifies the current staged source and executable hashes, launches native core/replay tests and separate continuous **600 simulated second / 18,000 accepted step** flat and curved endurance tests, then runs protocol-4 TCP/disk persistence and legacy phase-3 regressions. It records measured timing instead of claiming a wall-clock 30 Hz rate. `python Physics/test_phase4_configuration.py` separately checks one supplemental curved configuration with two fixed rear rows and Young modulus 30,000 Pa over actual TCP grasp/lift/release; its report carries the test-script and executable hashes. Endurance writes a CSV row for every accepted state; reports are under `Physics/runtime/phase4-*.json`. A passing report must have `passed:true`, all named checks true and matching executable/source provenance. Failed exploratory reports are not release evidence.
+
+## Configuration and model identity
+
+Configurable fields are width and length, thickness, sinusoidal curvature, Young modulus, Poisson ratio, density, Rayleigh mass/stiffness damping, friction and one to three fixed rear rows. Validation rejects unsupported values and unknown fields. Grid resolution remains **25 x 17**; gravity remains zero, alarm distance 1.5 mm and contact offset 0.45 mm. These constants cannot be changed by silently ignored JSON entries. Only the named defaults and the supplemental two-row / 30,000 Pa curved configuration are acceptance configurations; arbitrary allowed parameter combinations are not automatically validated.
+
+The curved center surface is `z = 0.006 + curvature * sin(pi * (y + length/2) / length)` in metres. Both thickness layers are offset along its local normal. Mass is computed from actual tetrahedral rest volumes, so a curved specimen need not have the flat specimen's 0.0144 kg mass. Configuration is included in every protocol-4 state and recording.
+
+Each reset creates a new `simulation_id`. `state_id` is monotonically increasing for the process; `session.step_index` counts accepted simulation advances. `node_ids` identify physical nodes within one simulation. `material_node_ids` retain source-grid and thickness-layer identity; split nodes receive new IDs with `parent_node_ids` lineage. Triangle connectivity and topology revisions accompany the positions.
+
+## Recording semantics
+
+The existing two-tool command is extended with `specimen`, `session_action` and monotonic `action_id`. Start recording or replay with a new client-selected `reset_id`; duplicate or stale actions never replay their reset side effects. Live motion cannot override replay. Replay completion holds the final state until stop or reset. Stop replay releases both tools.
+
+A recording stores one effective command for each accepted **1/30 s** simulation advance. `clear_stroke_edges:[bool,bool]` preserves transient opening/deactivation effects when several commands arrive between two steps. The pending clear flags are accumulated until the next accepted step, including pauses. Thus a quick active-tool switch cannot leave hidden blade contact seeds in a replay. Pause wall time is excluded from the simulated trajectory.
+
+Each take produces an actions JSON file, a physics `states.jsonl` stream (initial state plus one snapshot per recorded step), and metadata. Snapshots include configuration, vertices and velocities, rest positions, tetrahedra, fixed indices, physical/tool state, cut edges and node lineage. `last-session.json` allows a fresh process to load the latest nonempty completed take. Files are flushed on explicit stop, input timeout or client disconnect; `SESSION_SAVED` is logged. The recording limit is 180,000 accepted steps (100 simulated minutes). Video rendering, camera annotation and UE presentation snapshots are handled separately by the UE client.
+
+## Validated manipulation envelope
+
+The edge, corner and interior probes use opposed physical contact and a 4 mm lift. The 75-degree probe accepts actual holding or measured slip after initial bilateral contact, requires more than 2 mm of deformation during lift, and verifies reopening/reorientation/regrasping at 90 degrees without resetting the tissue. A corrected contact model need not reproduce the historical flat probe's slip outcome. Grip is not guaranteed for every orientation, insertion depth or load.
+
+The historical core curved-interior probe enters at the free front edge and returns along the raised arch. The old direct return reached approximately 0.493 mm sampled node overlap. The separate collision correction retains that direct return as a required regression, plus a fixed 19-case angle/speed/path matrix. It adds native line features and internal feature-validity filtering, allocates mapped free-state buffers, and propagates restored current/free positions and velocities into collision state after graph rebuilds, retries and rollback. A real-blade-cut regression compares all four parent/mapped vectors before the next animation at tolerance `1e-10`. It does not reroute the commanded straight return or apply attractive attachment forces. Exact success and operating range are established by the corrected build's complete receipts, not by the original guided-path result.
+
+The acceptance threshold remains **0.15 mm physical-node depth inside jaw boxes**. The correction also checks whole-triangle penetration and three interpolated states between accepted outputs through an independent geometry auditor. Finite interpolation sampling is a tunnelling screen, not continuous-time proof of every internal substep. Tissue self-collision, shaft collision and tool-tool collision remain outside this model. See the [collision correction](../docs/PHASE4-COLLISION-FIX.md) for coverage, actual straight-path checks and separate preserved-old-release failure evidence.
+
+Old `actions.v1` files remain loadable, but the format does not enforce a physics-model version. Identical old commands can produce different geometry and forces with corrected contact generation. Exact reproduction of an old recording requires its corresponding original executable/package. Within-build replay still has its own five-repeat gates.
+
+---
+
 # Phase 3: physical cutting of a thin tetrahedral layer
 
-The default `LapPhysics.exe` is the Phase 3 service on localhost **47323**, protocol **3**. `--phase2` retains the Phase 2 service on 47322. `--self-test` retains the Phase 2 numerical suite; `--self-test-phase3 <report.json>` runs Phase 3. `RunPhase3Regression.ps1` runs numerical and real-TCP acceptance. The TCP suite owns a hidden process on 47324.
+The legacy `LapPhysics.exe --phase3` service uses localhost **47323**, protocol **3**. `--phase2` retains the Phase 2 service on 47322. `--self-test` retains the Phase 2 numerical suite; `--self-test-phase3 <report.json>` runs Phase 3. `RunPhase3Regression.ps1` runs numerical and real-TCP acceptance. The TCP suite owns a hidden process on 47324.
 
 ## Mechanical model and limits
 
@@ -9,8 +64,8 @@ The default `LapPhysics.exe` is the Phase 3 service on localhost **47323**, prot
 - Density 1,000 kg/m3, total mass **0.0144 kg**. Per-node mass is lumped from actual tetrahedron rest volumes. The top, bottom, perimeter and exposed cut walls are physical collision/render surfaces derived from the tetrahedral boundary.
 - Implicit Euler, Rayleigh stiffness damping 0.015 and mass damping 8; each command/output update advances **1/30 s** of simulated time. A candidate first uses one step, then retries from the prior accepted body/tool state using two or four substeps if required. Each substep is audited before acceptance. Actual substep sizes range from 1/30 to 1/120 s; this is not a guaranteed achieved refresh rate. Measured wall-clock timing is in each acceptance report.
 - Rear edge fixed. Gravity is zero for this isolated manipulation exercise: fragments respond to contact and retained velocity, but do not fall ballistically. The tray supplies support contact. Tissue self-collision, tool-tool and shaft collisions are not modeled.
-- Native frictional Lagrangian contact uses coefficient 0.8, a 0.45 mm contact skin, compliance regularization 0.01 and triangle/point collision primitives. The solver uses up to 80 iterations at tolerance 1e-6. Each physical jaw is a two-segment triangulated oriented box, 14.5 x 2.5 x 1.4 mm.
-- The grasper requires opposing inner-jaw contact and load above 0.03 N to latch. It transfers traction through SOFA friction; adaptive closure advances 0.6 degrees per update when load falls below 0.03 N. Sustained contact loss releases the grip after nine update frames. Slip and release are possible during cutting.
+- Native frictional Lagrangian contact uses coefficient 0.8, a 0.45 mm contact skin, compliance regularization 0.01 and triangle/line/point collision primitives. `LocalMinDistance.useLMDFilters=false` activates the native feature-normal validity tests for this graph without separate external LMD filters. The solver uses up to 80 iterations at tolerance 1e-6. Each physical jaw remains a two-segment triangulated oriented box, 14.5 x 2.5 x 1.4 mm.
+- The grasper requires opposing inner-jaw contact and load above 0.03 N to latch. It transfers traction through SOFA friction; adaptive closure advances 0.6 degrees per update when load falls below the unchanged 0.03 N engineering controller threshold. This aggregate solver load is not measured handle force or a clinical force recommendation. Sustained contact loss releases the grip after nine update frames. Slip and release are possible during cutting.
 - Reported force is the sum of the tool contact-impulse magnitudes divided by the **actual substep duration**. It is not net tool reaction or a calibrated haptic force.
 - The scissors is a bounded closing-wedge model with an **8 degree minimum half-angle**. The actual angle is sent to UE and rendered. It does not model fully crossing surgical blades or continuous fracture energy.
 

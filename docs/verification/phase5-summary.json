@@ -1,0 +1,130 @@
+{
+  "schema": "endoforge.public-verification-summary.v1",
+  "phase": 5,
+  "project_author": "Avalon",
+  "kind": "Derived summary of a sealed local delivery receipt; not an independent repeat or a clinical review.",
+  "local_receipt": "output/Phase5/phase5-final-verification.json",
+  "receipt_sha256": "24dc8dd64479d9640f42c4a89e9b4e7266cdf2dc969d462bad2d43d21c9770ff",
+  "receipt_fields": {
+    "schema": "endoforge.phase5.final-delivery.v1",
+    "phase": 5,
+    "passed": true,
+    "created_at_utc": "2026-10-22T17:53:52.815728+00:00",
+    "checks": {
+      "candidate_acceptance_passed": true,
+      "archive_crc_and_sha256_verified": true,
+      "fresh_extraction_manifest_verified": true,
+      "fresh_packaged_input_passed": true,
+      "fresh_contact_and_organ_geometry_audited": true,
+      "fresh_stereo_and_snapshot_audited": true,
+      "display_1920x1080_mean_fps_at_least_30": true,
+      "prior_deliveries_and_references_unchanged": true
+    },
+    "archive": {
+      "path": "output/Phase5/EndoForge-Phase5-Windows.zip",
+      "sha256": "a79369447d56025b657be091951a64ac3b6fc2e53fefa5d0ea035b49945b707a",
+      "bytes": 1428116068
+    },
+    "manifest_files": 770,
+    "physics_exe_sha256": "8cdf6f1573248d1947b000947c0e0ab3dc6b4f707d7facb69530aaab255e5f61",
+    "game_exe_sha256": "2dc96bb303198523404bae705db1c1cbb0a60f45f6022f636fdd61d8a7985ef5",
+    "physics_asset_sha256": "2a10b1f0a19888e011fec356d77d0debae753ada15bd5cd05159d78f7fcffa16",
+    "source_model": "Assets/Phase5/EndoForge_Anatomy.blend",
+    "native_metrics": {
+      "matrix_cases": 9,
+      "continuous_simulation_seconds": 608.8333333333334,
+      "continuous_cycles": 50,
+      "isolated_native_step_p95_ms": 49.2575,
+      "replay_repeats": 5,
+      "maximum_replay_frame_node_rms_m": 1.1154722279752133e-12,
+      "same_process_replay_repeats": 5,
+      "same_process_maximum_node_rms_m": 1.1154722279752133e-12,
+      "fresh_process_replay_repeats": 5,
+      "fresh_process_maximum_node_rms_m": 8.744608182565942e-05,
+      "fresh_process_maximum_single_node_difference_m": 0.00017644313151536837,
+      "fresh_process_maximum_force_difference_n": 0.0129292191272188,
+      "fresh_process_events_identical": true,
+      "minimum_tet_volume_ratio": 0.8762028929786797,
+      "minimum_triangle_area_ratio": 0.8594906768196342,
+      "minimum_lumen_volume_ratio": 0.9871408520237549,
+      "maximum_lumen_volume_ratio": 1.0073296078545,
+      "peak_node_penetration_m": 0.0
+    },
+    "fresh_interactive_performance": {
+      "interactive_frames_measured": 1782,
+      "mean_fps": 59.909624830264704,
+      "p95_frame_ms": 16.666799545288086,
+      "p5_fps": 59.99952078248353,
+      "native_sim_time_per_wall_time": 0.833759088546877,
+      "scope": "interactive UE tick samples; blocking dataset export, snapshot freeze and immediate following tick excluded; no fixed-FPS assumption"
+    },
+    "fresh_contact_metrics": {
+      "states_audited_including_overlap": 811,
+      "maximum_node_depth_mm": 0.0,
+      "maximum_whole_triangle_depth_mm": 0.0,
+      "maximum_interpolated_depth_mm": 0.0,
+      "maximum_inter_tool_jaw_overlap_mm": 0.0,
+      "maximum_liver_surface_in_jaw_mm": 0.0,
+      "minimum_tet_volume_ratio": 0.902862822826371,
+      "minimum_triangle_area_ratio": 0.8999353909816048,
+      "interpolated_samples": 2421,
+      "reset_boundaries_not_interpolated": 2,
+      "jaw_travel_mm": [
+        59.71427771418675,
+        55.272758781601226
+      ],
+      "grasping_states_per_tool": [
+        356,
+        63
+      ],
+      "simultaneous_grasping_states": 63,
+      "liver_enclosed_jaw_centers_including_overlap": 0
+    },
+    "fresh_liver_metrics": {
+      "states_audited_including_overlap": 811,
+      "intersecting_or_touching_states_including_overlap": 0,
+      "wall_inside_liver_states_including_overlap": 0,
+      "broad_phase_candidate_pairs_tested_including_overlap": 1886893,
+      "maximum_winding_integer_error": 2.1203697876423444e-16,
+      "minimum_clearance_mm_among_distance_samples": 0.445427698997813,
+      "unique_clearance_states_sampled": 28,
+      "clearance_original_state_indices": [
+        0,
+        30,
+        60,
+        90,
+        120,
+        150,
+        180,
+        210,
+        240,
+        270,
+        300,
+        330,
+        360,
+        390,
+        420,
+        450,
+        480,
+        510,
+        540,
+        570,
+        599,
+        629,
+        659,
+        689,
+        719,
+        749,
+        779,
+        809
+      ],
+      "stages_unique_original_states": {
+        "presented_state": 810
+      }
+    },
+    "fresh_stereo_frames": 24,
+    "preserved_files": 1299,
+    "scope": "Phase 5 engineering scene and tested finite paths. No suturing, clinical tissue calibration or completed research dataset. Replay is tolerance-based, not bit-identical. Display FPS and actual simulation progression are separate measurements."
+  },
+  "publication_scope": "Source/assets and selected screenshots are public. The local archive and complete raw test evidence are not uploaded by this source synchronization."
+}

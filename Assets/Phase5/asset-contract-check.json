@@ -1,0 +1,182 @@
+{
+  "schema": "endoforge.asset-contract-check.v1",
+  "checks": {
+    "outer_wall_binding_error_m": 0,
+    "max_normal_squared_length_error": 2.010719151179785e-07,
+    "max_anchor_binding_reconstruction_error_m": 0.0,
+    "matching_static_liver_collision_mesh": true,
+    "unique_object_ids": true,
+    "textures_crc_and_full_decompression": true,
+    "attachment_boundary_binding": true,
+    "editable_blend_exists": true
+  },
+  "texture_files": {
+    "textures/GallbladderSerosa_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "7058799225290c4393a1eb265d12a66c4f9fa845ebc0f65445a67554570c4df5"
+    },
+    "textures/GallbladderSerosa_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "ed6aa2be2d2bd4a99d61d4ddf1d33c40ee768dffec58e69d9dd1c87b92c094dc"
+    },
+    "textures/GallbladderSerosa_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "64e217a1ac8655bbee7a740f6c519a64592f366e04cbca946b7f5da6e343e9a1"
+    },
+    "textures/HepaticCapsule_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "d56acaf60374675f05793db3668fbe874183fac059baafc23c75f04a6b77e80c"
+    },
+    "textures/HepaticCapsule_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "24f667d31764397f908eaca38ef25c485015c5b4d012f5843131f8e086674ffd"
+    },
+    "textures/HepaticCapsule_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "4f0c445a8193fc87b86cc64063f3176241c5c2f4d9ab0d66c45168c2b35db47f"
+    },
+    "textures/PeritonealLining_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "dd7c7831ee9efad4bcc90c7d846f15a3afb48c891f28e0baa70e02d9dc43c3be"
+    },
+    "textures/PeritonealLining_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "5acc68103f3f37c3cca1a2fb104f6af7b5486101bbdd9b6b01b2313417e734b2"
+    },
+    "textures/PeritonealLining_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "0315ec2c580b9ef8b61c9daba5e5cd89bbe40e4d5c475b0825b7deefc66388be"
+    },
+    "textures/OmentalFat_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "e3f171e46c5e2b934eca1bcf3f80a3576b187001b43fc9c432816b34ddc84dd1"
+    },
+    "textures/OmentalFat_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "8653d6e8addf756aaa9b97a35aaa2343e92d4a227a652b36bf47483fe4166fd2"
+    },
+    "textures/OmentalFat_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "9c79542079603caa8c3046044f171f3014116026c85654333961905dc412fbe0"
+    },
+    "textures/HepaticBedConnective_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "b83713c7eb1b1f42052c9a838ae6f70ad8f3602e30b42f42b03f923e7d85bb84"
+    },
+    "textures/HepaticBedConnective_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "9ea3af994be5ad80a1c574e5d371da78c72a5fbd35e5530151b8e1cee20e6cb8"
+    },
+    "textures/HepaticBedConnective_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "621ee379472a6b2dbdbcabc328ff1495ed2530ac16be168cd792778bde42fb82"
+    },
+    "textures/BiliaryDuct_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "061c9102a4b981d9d4f98740ff99ebb5f0673338745138a8c25221aa92c66bd4"
+    },
+    "textures/BiliaryDuct_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "528192b57f89b67a78ead45fe5d320e6ab51e4e7cbe7767a9a9f5b78d7b3abfa"
+    },
+    "textures/BiliaryDuct_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "25ea763bd99a9cd12219eaa217840644b0fdd9b5c28ad1069a51bdf4ed08c9cc"
+    },
+    "textures/ArterialLandmark_base.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "5eb32c9a10fcf5154c5b6cd09895ffecb1254f10ed6f776edc1c3175daa51b36"
+    },
+    "textures/ArterialLandmark_normal.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "a7757709fff4f6a81bac3bd17d2ee6477ae99f169722bad0c02e1980a659b9a9"
+    },
+    "textures/ArterialLandmark_roughness.png": {
+      "width": 1024,
+      "height": 1024,
+      "sha256": "b4a1e5d2e30f1550dff4cc6cea48f7ab948f747122a1da01dd32b6bfe1ea5401"
+    }
+  },
+  "meshes": {
+    "Gallbladder": {
+      "vertices": 266,
+      "triangles": 528,
+      "boundary_edges": 0,
+      "connected_components": 1,
+      "closed_required": true
+    },
+    "Liver_HepaticSupport": {
+      "vertices": 1194,
+      "triangles": 2384,
+      "boundary_edges": 0,
+      "connected_components": 1,
+      "closed_required": true
+    },
+    "LocalPeritonealCavity": {
+      "vertices": 2145,
+      "triangles": 4096,
+      "boundary_edges": 192,
+      "connected_components": 1,
+      "closed_required": false
+    },
+    "InferiorCavitySurface": {
+      "vertices": 1617,
+      "triangles": 3072,
+      "boundary_edges": 160,
+      "connected_components": 1,
+      "closed_required": false
+    },
+    "AnteriorOmentalFold": {
+      "vertices": 2626,
+      "triangles": 5000,
+      "boundary_edges": 250,
+      "connected_components": 1,
+      "closed_required": false
+    },
+    "LateralOmentalFold": {
+      "vertices": 7371,
+      "triangles": 14400,
+      "boundary_edges": 340,
+      "connected_components": 1,
+      "closed_required": false
+    },
+    "CysticDuctLandmark": {
+      "vertices": 352,
+      "triangles": 700,
+      "boundary_edges": 0,
+      "connected_components": 1,
+      "closed_required": true
+    },
+    "CysticArteryLandmark": {
+      "vertices": 252,
+      "triangles": 500,
+      "boundary_edges": 0,
+      "connected_components": 1,
+      "closed_required": true
+    }
+  },
+  "physics_sha256": "2a10b1f0a19888e011fec356d77d0debae753ada15bd5cd05159d78f7fcffa16",
+  "scene_sha256": "4bcb11bf8b90b82a79bd8832a92f09ed0259d2ea4f4ccf5b9f7f0ac8ee2a0ddd",
+  "blend_sha256": "23785c8a564453b5f997c8ab5dc9cd31df063812d8aa9f8565938475bb7fd68a",
+  "passed": true
+}

@@ -11,7 +11,7 @@ log = (RUNTIME / 'phase3-network-test.log').open('w', encoding='utf8')
 probe = socket.socket()
 probe.bind(('127.0.0.1', PORT))
 probe.close()
-proc = subprocess.Popen([str(RUNTIME / 'LapPhysics.exe'), '--port', str(PORT)], cwd=RUNTIME,
+proc = subprocess.Popen([str(RUNTIME / 'LapPhysics.exe'), '--phase3', '--port', str(PORT)], cwd=RUNTIME,
                         stdout=log, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW)
 sock = None
 buffer = b''

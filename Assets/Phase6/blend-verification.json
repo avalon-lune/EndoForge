@@ -1,0 +1,164 @@
+{
+  "schema": "endoforge.native-blend-verification.v1",
+  "passed": true,
+  "native_reopen": true,
+  "blender_version": "5.2.2 LTS",
+  "blend_sha256": "0b78aaa2e2aaba036d962eb4afdbd4f1ceb3b6f220d0dc5cb773b4b669049265",
+  "scene_sha256": "27fddf1e46e2058d242f388773fe3abc93a307584023ac17c300ddff7fcde40d",
+  "editable_objects": 12,
+  "texture_links_loaded": 21,
+  "texture_paths": [
+    {
+      "file": "textures/ArterialLandmark_base.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/ArterialLandmark_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/ArterialLandmark_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/BiliaryDuct_base.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/BiliaryDuct_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/BiliaryDuct_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/GallbladderSerosa_base.png",
+      "resolution": [
+        4096,
+        4096
+      ]
+    },
+    {
+      "file": "textures/GallbladderSerosa_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/GallbladderSerosa_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/HepaticBedConnective_base.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/HepaticBedConnective_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/HepaticBedConnective_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/HepaticCapsule_base.png",
+      "resolution": [
+        4096,
+        4096
+      ]
+    },
+    {
+      "file": "textures/HepaticCapsule_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/HepaticCapsule_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/OmentalFat_base.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/OmentalFat_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/OmentalFat_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/PeritonealLining_base.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/PeritonealLining_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/PeritonealLining_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "no_preview_only_subdivision": true,
+  "custom_smooth_normals_preserved": true,
+  "units": "m",
+  "physical_scale": 1.0,
+  "clinical_review": "pending"
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "endoforge.public-image-provenance.v1",
+  "scope": "Unmodified local accepted r2 candidate package screenshots. No clinician/anatomist review is implied.",
+  "images": [
+    {
+      "file": "docs/images/phase6/workspace.png",
+      "source": "output/verification/Phase6-Candidate-20261024-r2/phase6-workspace.png",
+      "sha256": "0d85e9a6e9e1ea16034f163dce0b156bc66d50a1d19f2af75cd74666582fc898",
+      "bytes": 2138608,
+      "unmodified": true
+    },
+    {
+      "file": "docs/images/phase6/dual-traction.png",
+      "source": "output/verification/Phase6-Candidate-20261024-r2/phase6-dual-traction.png",
+      "sha256": "551fdea90fbebe479ee6a5b3119805fc71afb4ed2f548b6b5b3c9cfbd4a37c5d",
+      "bytes": 2134258,
+      "unmodified": true
+    },
+    {
+      "file": "docs/images/phase6/jaw-contact.png",
+      "source": "output/verification/Phase6-Candidate-20261024-r2/phase6-jaw-contact.png",
+      "sha256": "ef4580403b243dad913087528d6f7e07d584f6e62643d68e2584b3ec78458aa4",
+      "bytes": 2246537,
+      "unmodified": true
+    },
+    {
+      "file": "docs/images/phase6/organ-closeup.png",
+      "source": "output/verification/Phase6-Candidate-20261024-r2/phase6-organ-closeup.png",
+      "sha256": "f910641762b487c83f7184d95ca8374321df0c2481811c4070b17ba2e4531447",
+      "bytes": 2139670,
+      "unmodified": true
+    }
+  ]
+}

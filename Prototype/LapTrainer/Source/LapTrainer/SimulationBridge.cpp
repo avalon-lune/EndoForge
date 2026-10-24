@@ -33,12 +33,39 @@ bool ReadVector(const TSharedPtr<FJsonObject>& Object, const TCHAR* Name, FVecto
     Out = FVector(V[0], V[1], V[2]) * Scale;
     return true;
 }
+
+// A bounded, type-aware canonical signature binds nested collision settings and
+// authored trocar arrays as well as scalars. Object member order is immaterial.
+bool AppendConfigValue(const TSharedPtr<FJsonValue>& Value, FString& Out, int32 Depth = 0)
+{
+    if (!Value.IsValid() || Depth > 4 || Out.Len() > 16384) return false;
+    switch (Value->Type)
+    {
+    case EJson::Number:
+    { const double N=Value->AsNumber();if(!FMath::IsFinite(N))return false;Out+=FString::Printf(TEXT("n%.17g;"),N);return true; }
+    case EJson::Boolean: Out+=Value->AsBool()?TEXT("b1;"):TEXT("b0;");return true;
+    case EJson::String:
+    { const FString S=Value->AsString();if(S.Len()>1024)return false;Out+=FString::Printf(TEXT("s%d:"),S.Len())+S;return true; }
+    case EJson::Array:
+    { const auto& A=Value->AsArray();if(A.Num()>32)return false;Out+=TEXT("[");for(const auto& V:A)if(!AppendConfigValue(V,Out,Depth+1))return false;Out+=TEXT("]");return true; }
+    case EJson::Object:
+    { const auto O=Value->AsObject();if(!O.IsValid()||O->Values.Num()>64)return false;TArray<FString> Keys;O->Values.GetKeys(Keys);Keys.Sort();Out+=TEXT("{");
+      for(const auto& K:Keys){if(K.Len()>128)return false;Out+=FString::Printf(TEXT("k%d:"),K.Len())+K;if(!AppendConfigValue(O->Values[K],Out,Depth+1))return false;}Out+=TEXT("}");return true; }
+    default:return false;
+    }
+}
 }
 
 void USimulationBridge::InitializeBridge()
 {
     if (bInitialized) return;
     bInitialized = true;
+    if (FParse::Param(FCommandLine::Get(), TEXT("LapPhase3Test")) || FParse::Param(FCommandLine::Get(), TEXT("LapPhase3")))
+    { ExpectedProtocol = 3; PhysicsPort = 47323; }
+    if (FParse::Param(FCommandLine::Get(), TEXT("LapPhase5")) || FParse::Param(FCommandLine::Get(), TEXT("LapPhase5Test")))
+    { ExpectedProtocol = 5; PhysicsPort = 47327; RequestedSpecimen = TEXT("gallbladder"); }
+    bPhase6Commands=FParse::Param(FCommandLine::Get(),TEXT("LapPhase6")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
+    if(bPhase6Commands) { ExpectedProtocol=5;PhysicsPort=47329;RequestedSpecimen=TEXT("gallbladder"); }
     int32 RequestedPort = PhysicsPort;
     if (FParse::Value(FCommandLine::Get(), TEXT("LapPhysicsPort="), RequestedPort) && RequestedPort > 1024 && RequestedPort <= 65535)
         PhysicsPort = RequestedPort;
@@ -91,6 +118,8 @@ void USimulationBridge::Disconnect(const FString& Reason)
     bHandshake = false;
     bGrasping = false;
     bHasToolState = false;
+    AcceptedState.Reset(); ModelMetadata.Reset(); ModelSignature.Empty(); SessionMode = TEXT("idle"); PendingSessionAction.Empty();
+    PendingActionId = AcknowledgedActionId = 0; NativeStateId = SimulationId = 0;
     JawPoses.Reset();
     ToolStates.Reset();
     ContactCount = 0;
@@ -99,6 +128,10 @@ void USimulationBridge::Disconnect(const FString& Reason)
     SlipDistanceMm = 0;
     GripState = TEXT("offline");
     LastStateSeconds = 0;
+    AppliedCommandSequence = 0;
+    FrozenResumeFenceSequence = FrozenResumeAfterStateId = 0;
+    FrozenResumeFenceSeconds = 0;
+    bFrozenResumePending = false;
     ForceNewton = 0;
     Status = Reason;
     NextConnectSeconds = FPlatformTime::Seconds() + 1.0;
@@ -146,6 +179,13 @@ bool USimulationBridge::GetJawPose(int32 JawIndex, FTransform& OutPoseCm) const
     return true;
 }
 
+void USimulationBridge::RequestSessionAction(const FString& Action)
+{
+    if (ExpectedProtocol < 4 || !IsConnected() || HasPendingSessionAction()) return;
+    PendingSessionAction = Action;
+    PendingActionId = FMath::Max(PendingActionId, AcknowledgedActionId) + 1;
+}
+
 void USimulationBridge::QueueCommand(const TArray<FLapToolCommand>& Commands, int32 ActiveTool, bool bPermitClosure)
 {
     // A partially transmitted record must finish before the next record is queued.
@@ -168,11 +208,18 @@ void USimulationBridge::QueueCommand(const TArray<FLapToolCommand>& Commands, in
         Tool->SetArrayField(TEXT("tip_m"), Tip);
         Tool->SetNumberField(TEXT("closed"), Input.bClosed && bPermitClosure ? 1.0 : 0.0);
         Tool->SetNumberField(TEXT("roll_deg"), FMath::IsFinite(Input.RollDeg) ? FMath::UnwindDegrees(Input.RollDeg) : 0.0f);
+        if(bPhase6Commands) { Tool->SetBoolField(TEXT("hold_tip"),Input.bHoldTip);Tool->SetBoolField(TEXT("hold_roll"),Input.bHoldRoll);Tool->SetBoolField(TEXT("bounded_target"),Input.bBoundedTarget); }
         Tools.Add(MakeShared<FJsonValueObject>(Tool));
     }
     Command->SetArrayField(TEXT("tools"), Tools);
     Command->SetNumberField(TEXT("reset_id"), ResetId);
     Command->SetBoolField(TEXT("paused"), false);
+    if (ExpectedProtocol >= 4)
+    {
+        Command->SetStringField(TEXT("specimen"), RequestedSpecimen);
+        Command->SetNumberField(TEXT("action_id"), static_cast<double>(PendingActionId));
+        if (HasPendingSessionAction()) Command->SetStringField(TEXT("session_action"), PendingSessionAction);
+    }
     FString Text;
     auto Writer = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Text);
     FJsonSerializer::Serialize(Command, Writer);
@@ -204,7 +251,20 @@ void USimulationBridge::TickDualBridge(float DeltaSeconds, const TArray<FLapTool
     }
     ReceiveMessages();
     if (!Socket) return;
+    CheckFrozenResumeFence();
+    const uint64 PreviousCommandSequence = CommandSequence;
     QueueCommand(Commands, ActiveTool, bHealthy && IsConnected() && ResetId == AcknowledgedResetId);
+    if (bPhase6Commands && bFrozenResumePending && FrozenResumeFenceSequence == 0 &&
+        CommandSequence > PreviousCommandSequence)
+    {
+        // QueueCommand may have declined while finishing a partially sent frozen
+        // command. Only a newly queued ordinary command is a post-freeze fence.
+        FrozenResumeFenceSequence = CommandSequence;
+        FrozenResumeFenceSeconds = FPlatformTime::Seconds();
+        UE_LOG(LogTemp, Display, TEXT("LAP_PHASE6_RESUME_FENCE queued=%llu after_state=%llu"),
+            static_cast<unsigned long long>(FrozenResumeFenceSequence),
+            static_cast<unsigned long long>(FrozenResumeAfterStateId));
+    }
     if (SendOffset < SendBuffer.Num())
     {
         int32 Sent = 0;
@@ -216,6 +276,61 @@ void USimulationBridge::TickDualBridge(float DeltaSeconds, const TArray<FLapTool
     if ((bHandshake && LastStateSeconds > 0 && Now - LastStateSeconds > 3.0) ||
         (LastStateSeconds == 0 && Now - ConnectStartedSeconds > 5.0))
         Disconnect(TEXT("SOFA timed out - reconnecting"));
+}
+
+void USimulationBridge::TickFrozenBridge()
+{
+    // A snapshot freezes only presentation. Keep the last user command alive without
+    // consuming/committing newer states, so image geometry and metadata stay identical.
+    if (!Socket || Socket->GetConnectionState()!=SCS_Connected || LastCommands.Num()!=2) return;
+    if (bPhase6Commands && !IsReplayLocked())
+    {
+        // Each frozen heartbeat invalidates any earlier resume fence. This also
+        // covers consecutive stereo/review captures in one actor tick.
+        bFrozenResumePending = true;
+        FrozenResumeFenceSequence = 0;
+        FrozenResumeFenceSeconds = 0;
+        FrozenResumeAfterStateId = NativeStateId;
+    }
+    else if (bPhase6Commands)
+    {
+        // Replay ignores live commands. Its snapshot recovery retains the
+        // existing presentation-only behavior, without a live command fence.
+        bFrozenResumePending = false;
+        FrozenResumeFenceSequence = 0;
+    }
+    const TArray<FLapToolCommand> FrozenCommands=LastCommands;
+    QueueCommand(FrozenCommands,LastActiveTool,bHealthy && ResetId==AcknowledgedResetId);
+    if (SendOffset<SendBuffer.Num())
+    {
+        int32 Sent=0; Socket->Send(SendBuffer.GetData()+SendOffset,SendBuffer.Num()-SendOffset,Sent);
+        SendOffset+=FMath::Max(0,Sent);
+        if(SendOffset>=SendBuffer.Num()) { SendBuffer.Reset(); SendOffset=0; }
+    }
+}
+
+void USimulationBridge::CheckFrozenResumeFence()
+{
+    if (bPhase6Commands && IsReplayLocked())
+    {
+        // A session action may enter replay while a live fence is pending.
+        // Do not carry an unacknowledgeable live sequence across that boundary.
+        if (bFrozenResumePending)
+            UE_LOG(LogTemp, Display, TEXT("LAP_PHASE6_RESUME_FENCE bypassed mode=%s; no live-command freshness guarantee"), *SessionMode);
+        bFrozenResumePending = false;
+        FrozenResumeFenceSequence = 0;
+        return;
+    }
+    if (!IsFrozenResumePending() || FrozenResumeFenceSequence == 0 || !IsHealthy() ||
+        ResetId != AcknowledgedResetId || NativeStateId <= FrozenResumeAfterStateId ||
+        LastStateSeconds < FrozenResumeFenceSeconds) return;
+    if (AppliedCommandSequence < FrozenResumeFenceSequence) return;
+    UE_LOG(LogTemp, Display, TEXT("LAP_PHASE6_RESUME_FENCE accepted=%llu applied=%llu state=%llu simulation=%llu native_s=%.9f"),
+        static_cast<unsigned long long>(FrozenResumeFenceSequence),
+        static_cast<unsigned long long>(AppliedCommandSequence),
+        static_cast<unsigned long long>(NativeStateId),
+        static_cast<unsigned long long>(SimulationId), NativeTime);
+    bFrozenResumePending = false;
 }
 
 void USimulationBridge::ReceiveMessages()
@@ -267,9 +382,9 @@ void USimulationBridge::HandleMessage(const FString& Line)
         if (bHandshake) { Reject(TEXT("duplicate handshake on an established connection")); return; }
         double Protocol = 0;
         FString Units;
-        if (!Object->TryGetNumberField(TEXT("protocol"), Protocol) || Protocol != 3 ||
+        if (!Object->TryGetNumberField(TEXT("protocol"), Protocol) || Protocol != ExpectedProtocol ||
             !Object->TryGetStringField(TEXT("units"), Units) || Units != TEXT("m"))
-        { Reject(TEXT("Phase 3 requires matching protocol 3 service")); return; }
+        { Reject(TEXT("Client requires matching physics protocol")); return; }
     }
     // Positions, connectivity and tool poses are one transaction. Never display a new
     // topology with vertices or commands from a different accepted state.
@@ -306,6 +421,7 @@ void USimulationBridge::HandleMessage(const FString& Line)
     }
     double NewTopology = 0, NewCuts = 0, NewComponents = 1, NewLength = 0;
     double NewStep = 0, NewDisp = 0, NewReset = 0, NewSafetyStops = 0;
+    double NewAppliedSequence = 0;
     bool NewHealthy = true;
     TArray<FLapToolState> NewTools;
     FString Detail;
@@ -313,6 +429,12 @@ void USimulationBridge::HandleMessage(const FString& Line)
     {
         auto IntField = [&](const TCHAR* Name, double& Out, double Max)
         { return ReadBoundedNumber(Object, Name, Out, 0, Max) && Out == FMath::FloorToDouble(Out); };
+        if (bPhase6Commands)
+        {
+            if (!IntField(TEXT("applied_command_seq"), NewAppliedSequence, 9007199254740991.0) ||
+                NewAppliedSequence > static_cast<double>(CommandSequence))
+            { Reject(TEXT("invalid Phase 6 applied command sequence")); return; }
+        }
         if (!IntField(TEXT("safety_stops"), NewSafetyStops, MAX_int32) ||
             !IntField(TEXT("topology_revision"), NewTopology, MAX_int32) ||
             !IntField(TEXT("cut_count"), NewCuts, 100000) || !IntField(TEXT("component_count"), NewComponents, 20000) || NewComponents < 1 ||
@@ -354,6 +476,25 @@ void USimulationBridge::HandleMessage(const FString& Line)
             T.RollDeg = Roll; T.JawOpenFraction = Open; T.ForceNewton = Force;
             T.ContactCount = static_cast<int32>(Contacts); T.ContactForceNewton = ContactForce;
             T.PenetrationMm = Pen * 1000; T.SlipDistanceMm = Slip * 1000;
+            if(bPhase6Commands)
+            {
+                const TSharedPtr<FJsonObject>* Guard=nullptr;FString Implementation;bool InitialValid=false;
+                double Witness=0,Margin=0,Work=0,InitialClearance=0,EndpointClearance=0;
+                if(!(*Tool)->TryGetObjectField(TEXT("motion_guard"),Guard)||!Guard->IsValid()||
+                    !(*Guard)->TryGetStringField(TEXT("implementation"),Implementation)||Implementation!=TEXT("phase6-rcm-jaw-liver-ccd-v1")||
+                    !(*Guard)->TryGetBoolField(TEXT("blocked"),T.bMotionBlocked)||!(*Guard)->TryGetBoolField(TEXT("initial_valid"),InitialValid)||
+                    !(*Guard)->TryGetStringField(TEXT("reason"),T.MotionGuardReason)||T.MotionGuardReason.IsEmpty()||T.MotionGuardReason.Len()>96||
+                    !ReadBoundedNumber(*Guard,TEXT("accepted_fraction"),T.MotionAcceptedFraction,0,1)||
+                    !ReadBoundedNumber(*Guard,TEXT("witness_triangle"),Witness,-1,2000000)||Witness!=FMath::FloorToDouble(Witness)||
+                    !ReadBoundedNumber(*Guard,TEXT("clearance_margin_m"),Margin,.00015,.00015)||
+                    !ReadBoundedNumber(*Guard,TEXT("work_count"),Work,0,512)||Work!=FMath::FloorToDouble(Work)||
+                    !ReadBoundedNumber(*Guard,TEXT("initial_clearance_m"),InitialClearance,0,1000)||
+                    !ReadBoundedNumber(*Guard,TEXT("endpoint_clearance_m"),EndpointClearance,0,1000)||
+                    (!InitialValid&&NewHealthy)||(InitialValid&&(InitialClearance<=Margin||EndpointClearance<=Margin||Work<1))||(!T.bMotionBlocked&&(T.MotionAcceptedFraction!=1||T.MotionGuardReason!=TEXT("clear")))||
+                    (T.bMotionBlocked&&(T.MotionAcceptedFraction>=1||T.MotionGuardReason==TEXT("clear"))))
+                {Reject(TEXT("invalid continuous rigid-liver motion guard"));return;}
+                T.MotionWitnessTriangle=static_cast<int32>(Witness);T.MotionGuardWorkCount=static_cast<int32>(Work);T.MotionClearanceMm=EndpointClearance*1000;
+            }
             const TArray<TSharedPtr<FJsonValue>>* Jaws = nullptr;
             if (!(*Tool)->TryGetArrayField(TEXT("jaw_poses"), Jaws) || Jaws->Num() != 2)
             { Reject(TEXT("tool needs two jaw frames")); return; }
@@ -375,19 +516,167 @@ void USimulationBridge::HandleMessage(const FString& Line)
                 { Reject(TEXT("jaw frame is not orthonormal")); return; }
                 T.JawPoses.Add(Pose);
             }
+            if(ExpectedProtocol==5 && !ReadVector(*Tool,TEXT("pivot_m"),T.PivotCm,100)) {Reject(TEXT("missing anatomy trocar pose"));return;}
             NewTools.Add(MoveTemp(T));
         }
         Object->TryGetStringField(TEXT("message"), Detail);
+    }
+    // Validate all Phase 4 identity/session metadata before committing geometry or tools.
+    FString NewSpecimen, NewMode, NewError, NewConfigSignature;
+    double NewNativeFrame=0;
+    double NewStateId = 0, NewSimulationId = 0, NewActionId = 0, NewIndex = 0, NewReplayLength = 0, NewRecordedSteps = 0, NewTime = 0;
+    TArray<int32> NewNodeIds, NewMaterialIds;
+    if (ExpectedProtocol >= 4)
+    {
+        auto Int = [](const TSharedPtr<FJsonObject>& O, const TCHAR* N, double& V)
+        { return ReadBoundedNumber(O, N, V, 0, 2147483647) && V == FMath::FloorToDouble(V); };
+        const TSharedPtr<FJsonObject>* Session = nullptr;
+        const TSharedPtr<FJsonObject>* Config = nullptr;
+        if (!Object->TryGetStringField(TEXT("specimen"), NewSpecimen) ||
+            (ExpectedProtocol == 5 ? NewSpecimen != TEXT("gallbladder") : (NewSpecimen != TEXT("flat") && NewSpecimen != TEXT("curved"))) ||
+            !Object->TryGetObjectField(TEXT("config"), Config) || !Config->IsValid() ||
+            !Int(Object, TEXT("state_id"), NewStateId) || !Int(Object, TEXT("simulation_id"), NewSimulationId) ||
+            !Object->TryGetObjectField(TEXT("session"), Session) || !Session->IsValid() ||
+            !(*Session)->TryGetStringField(TEXT("mode"), NewMode) ||
+            !(NewMode == TEXT("idle") || NewMode == TEXT("recording") || NewMode == TEXT("replaying") || NewMode == TEXT("replay_complete")) ||
+            !Int(*Session, TEXT("action_id"), NewActionId) || !Int(*Session, TEXT("step_index"), NewIndex) ||
+            !Int(*Session, TEXT("replay_length"), NewReplayLength) || !Int(*Session, TEXT("recorded_steps"), NewRecordedSteps) ||
+            !(*Session)->TryGetStringField(TEXT("error"), NewError) || NewError.Len() > 1024 ||
+            (!Hello && !ReadBoundedNumber(Object, TEXT("time"), NewTime, 0, 10000000)))
+        { Reject(TEXT("invalid Phase 4 snapshot/session metadata")); return; }
+        FString ConfigName;
+        if (!(*Config)->TryGetStringField(TEXT("name"),ConfigName) || ConfigName!=NewSpecimen)
+        { Reject(TEXT("configuration specimen mismatch")); return; }
+        NewConfigSignature=ConfigName;
+        struct FConfigRange { const TCHAR* Name; double Min,Max; };
+        const FConfigRange Ranges[]={{TEXT("width_m"),.08,.14},{TEXT("length_m"),.06,.10},{TEXT("thickness_m"),.001,.003},
+            {TEXT("curvature_m"),0,.015},{TEXT("young_modulus_pa"),10000,60000},{TEXT("poisson_ratio"),.2,.45},
+            {TEXT("density_kg_m3"),800,1200},{TEXT("rayleigh_mass"),1,20},{TEXT("rayleigh_stiffness"),.001,.05},
+            {TEXT("friction"),.1,1.2},{TEXT("fixed_rows"),1,3},{TEXT("mesh_nx"),25,25},{TEXT("mesh_ny"),17,17},
+            {TEXT("contact_offset_m"),.00045,.00045},{TEXT("alarm_distance_m"),.0015,.0015}};
+        for (const auto& Range:Ranges)
+        {
+            double V=0, Lo=Range.Min, Hi=Range.Max;
+            if(ExpectedProtocol==5)
+            {
+                const FString Field(Range.Name);
+                if(Field==TEXT("width_m") || Field==TEXT("length_m")) { Lo=.005; Hi=1; }
+                if(Field==TEXT("thickness_m")) { Lo=.0001; Hi=.02; }
+                if(Field==TEXT("mesh_nx") || Field==TEXT("mesh_ny")) { Lo=1; Hi=10000; }
+                if(Field==TEXT("fixed_rows")) { Lo=0; Hi=100000; }
+            }
+            if(!ReadBoundedNumber(*Config,Range.Name,V,Lo,Hi) ||
+                (FCString::Strcmp(Range.Name,TEXT("fixed_rows"))==0 && V!=FMath::FloorToDouble(V)) ||
+                (FCString::Strcmp(Range.Name,TEXT("curvature_m"))==0 && ConfigName==TEXT("flat") && V!=0))
+            { Reject(TEXT("invalid effective physical configuration")); return; }
+            NewConfigSignature+=FString::Printf(TEXT("|%.17g"),V);
+        }
+        FVector Gravity;
+        if(!ReadVector(*Config,TEXT("gravity_m_s2"),Gravity) || !Gravity.IsZero())
+        { Reject(TEXT("unsupported configured gravity")); return; }
+        if(ExpectedProtocol==5)
+        {
+            if(bPhase6Commands)
+            {
+                const TSharedPtr<FJsonObject>* Guard=nullptr;FString Implementation,ForceScope,GuardAsset,Asset;double Number=0;
+                if(!(*Config)->TryGetObjectField(TEXT("tool_motion_guard"),Guard)||!Guard->IsValid()||
+                    !(*Guard)->TryGetStringField(TEXT("implementation"),Implementation)||Implementation!=TEXT("phase6-rcm-jaw-liver-ccd-v1")||
+                    !ReadBoundedNumber(*Guard,TEXT("clearance_margin_m"),Number,.00015,.00015)||
+                    !ReadBoundedNumber(*Guard,TEXT("maximum_intervals"),Number,512,512)||
+                    !ReadBoundedNumber(*Guard,TEXT("maximum_depth"),Number,26,26)||
+                    !ReadBoundedNumber(*Guard,TEXT("minimum_fraction"),Number,1./67108864.,1./67108864.)||
+                    !(*Config)->TryGetStringField(TEXT("force_scope"),ForceScope)||ForceScope!=TEXT("soft_tissue_contact_impulse_only; rigid_liver_motion_guard_has_no_reaction_force")||
+                    !(*Config)->TryGetStringField(TEXT("asset_fingerprint"),Asset)||!(*Guard)->TryGetStringField(TEXT("static_geometry_asset_fingerprint"),GuardAsset)||Asset!=GuardAsset)
+                {Reject(TEXT("unrecognized Phase6 collision/force configuration"));return;}
+            }
+            if(!AppendConfigValue(MakeShared<FJsonValueObject>(*Config),NewConfigSignature))
+            {Reject(TEXT("unsupported anatomy configuration value"));return;}
+        }
+        const TArray<TSharedPtr<FJsonValue>>* Parents=nullptr;
+        if(!Object->TryGetArrayField(TEXT("parent_node_ids"),Parents) || Parents->Num()!=NewVertices.Num())
+        { Reject(TEXT("parent identity count mismatch")); return; }
+        for(const auto& Parent:*Parents)
+        {
+            double P=0;
+            if(!Parent->TryGetNumber(P) || !FMath::IsFinite(P) || P < -1 || P>MAX_int32 || P!=FMath::FloorToDouble(P))
+            { Reject(TEXT("invalid parent node identity")); return; }
+        }
+        if(!Hello && FMath::Abs(NewTime-NewIndex/30.0)>1e-5)
+        { Reject(TEXT("simulation time does not match accepted step index")); return; }
+        if(!Hello && !Int(Object,TEXT("frame"),NewNativeFrame))
+        { Reject(TEXT("invalid native frame identity")); return; }
+        if((NewMode==TEXT("replaying") || NewMode==TEXT("replay_complete")) &&
+            (NewReplayLength<1 || NewIndex>NewReplayLength || (NewMode==TEXT("replay_complete") && NewIndex!=NewReplayLength)))
+        { Reject(TEXT("invalid replay timeline")); return; }
+        for (int32 Which = 0; Which < 2; ++Which)
+        {
+            const TArray<TSharedPtr<FJsonValue>>* Ids = nullptr;
+            if (!Object->TryGetArrayField(Which == 0 ? TEXT("node_ids") : TEXT("material_node_ids"), Ids) || Ids->Num() != NewVertices.Num())
+            { Reject(TEXT("node identity count mismatch")); return; }
+            TSet<int32> Unique;
+            for (const auto& Id : *Ids)
+            {
+                double N = 0;
+                if (!Id->TryGetNumber(N) || !FMath::IsFinite(N) || N < 0 || N > MAX_int32 || N != FMath::FloorToDouble(N) || (Which == 0 && Unique.Contains(static_cast<int32>(N))))
+                { Reject(TEXT("invalid or duplicate node identity")); return; }
+                (Which == 0 ? NewNodeIds : NewMaterialIds).Add(static_cast<int32>(N));
+                Unique.Add(static_cast<int32>(N));
+            }
+        }
+        if (!Hello && bHasToolState)
+        {
+            if (NewStateId <= NativeStateId || NewSimulationId < SimulationId || NewActionId < AcknowledgedActionId || NewNativeFrame < NativeFrame)
+            { Reject(TEXT("stale Phase 4 state identity")); return; }
+            if (NewReset == AcknowledgedResetId && (NewIndex<StepIndex || NewTime+1e-9<NativeTime))
+            { Reject(TEXT("simulation timeline regressed without reset")); return; }
+            if (NewReset == AcknowledgedResetId && (NewSimulationId != SimulationId || NewSpecimen != Specimen || NewConfigSignature != ConfigSignature))
+            { Reject(TEXT("configuration changed without reset")); return; }
+            if (NewReset == AcknowledgedResetId && NewTopology == TopologyRevision &&
+                (NewNodeIds != NodeIds || NewMaterialIds != MaterialIds))
+            { Reject(TEXT("node identities changed without topology revision")); return; }
+        }
+    }
+    FString NewModelSignature;
+    if(ExpectedProtocol==5)
+    {
+        for(const TCHAR* Key:{TEXT("model_id"),TEXT("model_version"),TEXT("asset_fingerprint")})
+        {
+            FString Value;
+            if(!Object->TryGetStringField(Key,Value))
+            {
+                double Version=0;
+                if(FString(Key)==TEXT("model_version") && Object->TryGetNumberField(Key,Version) && FMath::IsFinite(Version) && Version>=1 && Version==FMath::FloorToDouble(Version)) Value=FString::Printf(TEXT("%.0f"),Version);
+            }
+            if(Value.IsEmpty() || Value.Len()>256) { Reject(TEXT("missing anatomy model provenance")); return; }
+            NewModelSignature+=Value+TEXT("|");
+        }
+          NewModelSignature+=NewConfigSignature;
+          if(!Hello && NewModelSignature!=ModelSignature)
+        { Reject(TEXT("anatomy asset changed on an established connection")); return; }
     }
     VerticesCm = MoveTemp(NewVertices);
     Triangles = MoveTemp(NewTriangles);
     PhysicsNodeCount = VerticesCm.Num();
     ++MeshRevision;
+    if (ExpectedProtocol >= 4)
+    {
+        ConfigSignature=NewConfigSignature; NativeFrame=static_cast<uint64>(NewNativeFrame);
+        NativeStateId = static_cast<uint64>(NewStateId); SimulationId = static_cast<uint64>(NewSimulationId);
+        StepIndex = static_cast<uint64>(NewIndex); ReplayLength = static_cast<uint64>(NewReplayLength);
+        RecordedSteps = static_cast<uint64>(NewRecordedSteps); NativeTime = NewTime;
+        Specimen = NewSpecimen; SessionMode = NewMode; SessionError = NewError;
+        if (Hello || static_cast<int32>(NewReset)==ResetId) RequestedSpecimen = Specimen;
+        AcknowledgedActionId = static_cast<uint64>(NewActionId);
+        if (!HasPendingSessionAction()) PendingSessionAction.Empty();
+        NodeIds = MoveTemp(NewNodeIds); MaterialIds = MoveTemp(NewMaterialIds);
+        AcceptedState = Object;
+    }
     if (Hello)
     {
+        if(ExpectedProtocol==5) { ModelSignature=NewModelSignature; ModelMetadata=Object; }
         Object->TryGetStringField(TEXT("solver"), SolverName);
         bHandshake = true;
-        UE_LOG(LogTemp, Display, TEXT("EndoForge protocol 3 handshake: %s"), *SolverName);
+        UE_LOG(LogTemp, Display, TEXT("EndoForge protocol %d handshake: %s"), ExpectedProtocol, *SolverName);
         return;
     }
     ToolStates = MoveTemp(NewTools);
@@ -399,6 +688,10 @@ void USimulationBridge::HandleMessage(const FString& Line)
     // Retain observed protection history across resets and reconnects.
     SafetyStopCount = FMath::Max(SafetyStopCount, static_cast<uint64>(NewSafetyStops));
     bHasToolState = true; LastStateSeconds = FPlatformTime::Seconds();
+    if (bPhase6Commands)
+    {
+        AppliedCommandSequence = static_cast<uint64>(NewAppliedSequence);
+    }
     const FLapToolState& Grasper = ToolStates[0];
     bGrasping = Grasper.bGrasping; ForceNewton = Grasper.ForceNewton;
     ActualTipCm = Grasper.ActualTipCm; ActualRollDeg = Grasper.RollDeg; JawOpenFraction = Grasper.JawOpenFraction;

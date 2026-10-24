@@ -174,7 +174,7 @@ void TrainingGeometry::BuildSurfaceBindings(const TArray<FVector>& RestPositions
 {
     OutSamples.Reset();
     OutMesh = FTrainingRenderMesh();
-    const int32 S = FMath::Clamp(Subdivisions, 1, 5);
+    const int32 S = FMath::Clamp(Subdivisions, 1, 12);
     for (int32 Face = 0; Face + 2 < Faces.Num(); Face += 3)
     {
         const int32 A = Faces[Face], B = Faces[Face + 1], C = Faces[Face + 2];

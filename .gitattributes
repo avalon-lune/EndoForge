@@ -19,3 +19,13 @@
 *.png binary
 *.jpg binary
 *.jpeg binary
+
+# Accepted simulation inputs and asset contracts use byte-level SHA-256 identities.
+# Preserve their authored line endings across checkout; text diffs still work.
+/Assets/** -text !eol
+/Physics/** -text !eol
+/Prototype/LapTrainer/Source/** -text !eol
+/Prototype/LapTrainer/Config/** -text !eol
+/Prototype/LapTrainer/Scripts/** -text !eol
+/Prototype/LapTrainer/LapTrainer.uproject -text !eol
+/Scripts/** -text !eol

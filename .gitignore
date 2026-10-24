@@ -1,5 +1,6 @@
 # Downloaded SDKs, tool distributions, local delivery packages and scratch work.
 /ThirdParty/
+/source/
 /output/
 /tmp/
 /Physics/build/
@@ -45,6 +46,7 @@ Build/Windows/FileOpenOrder/
 *.ucas
 *.utoc
 *.log
+*.blend1
 Logs/
 logs/
 session-*.csv

@@ -1,0 +1,16 @@
+{
+  "name": "curved",
+  "width_m": 0.12,
+  "length_m": 0.08,
+  "thickness_m": 0.0015,
+  "curvature_m": 0.012,
+  "young_modulus_pa": 25000,
+  "poisson_ratio": 0.35,
+  "density_kg_m3": 1000,
+  "rayleigh_mass": 8,
+  "rayleigh_stiffness": 0.015,
+  "friction": 0.8,
+  "fixed_rows": 1,
+  "mesh_nx": 25,
+  "mesh_ny": 17
+}

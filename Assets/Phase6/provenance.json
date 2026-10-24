@@ -1,0 +1,193 @@
+{
+  "schema": "endoforge.phase6.final-anatomy-candidate.v1",
+  "candidate_only": false,
+  "clinical_anatomy_validated": false,
+  "physics_json_sha256": "6d116d2752664ae4af3b638eee91c2be11f7ce22502091d147e1c6266ac3a37d",
+  "gallbladder_fem_and_attachments_unchanged": true,
+  "restored_operative_liver_corner_count": 1,
+  "liver_self_intersection": {
+    "candidate_pairs": 17190,
+    "nonadjacent_pair_count": 1884,
+    "nonadjacent_intersections": 0,
+    "adjacent_interior_intersections": 0,
+    "nonadjacent_tolerance_m": 1e-09,
+    "adjacent_barycentric_contraction": 1e-06,
+    "adjacent_tolerance_m": 1e-11,
+    "passed": true,
+    "scope": "Every AABB-overlapping triangle pair; adjacent boundaries excluded by 1e-6 barycentric contraction. Not a claim of exact-arithmetic intersection freedom below these tolerances."
+  },
+  "landmark_caps": [
+    {
+      "id": 400,
+      "controls_m": [
+        [
+          0.0035,
+          0.022,
+          0.025
+        ],
+        [
+          0.008,
+          0.034,
+          0.016
+        ],
+        [
+          0.025,
+          0.052,
+          0.009
+        ],
+        [
+          0.038,
+          0.071,
+          -0.009
+        ]
+      ],
+      "all_start_cap_vertices_inside_organ": true,
+      "all_end_cap_vertices_inside_liver": true
+    },
+    {
+      "id": 401,
+      "controls_m": [
+        [
+          0.0055,
+          0.019,
+          0.0245
+        ],
+        [
+          0.013,
+          0.035,
+          0.015
+        ],
+        [
+          0.032,
+          0.055,
+          0.011
+        ],
+        [
+          0.044,
+          0.075,
+          -0.007
+        ]
+      ],
+      "all_start_cap_vertices_inside_organ": true,
+      "all_end_cap_vertices_inside_liver": true
+    }
+  ],
+  "camera": {
+    "position_m": [
+      0.026,
+      -0.087,
+      0.121
+    ],
+    "target_m": [
+      0.003,
+      0.003,
+      0.019
+    ],
+    "fov_degrees": 64
+  },
+  "script_sha256": "a8d87ce82d03ea093876ea7d3521e92e22c9b5d5806859429e05fa9ca7856ace",
+  "source_provenance": {
+    "schema": "endoforge.phase6.anatomy-candidate-provenance.v1",
+    "candidate_only": true,
+    "script_sha256": "85085559a2d176647d81de52923ceda266b93ec1e76c41bed1a0eb9cb6225b2e",
+    "author_helpers_sha256": "a8d87ce82d03ea093876ea7d3521e92e22c9b5d5806859429e05fa9ca7856ace",
+    "source_scene_sha256": "6c9573ba75a71ce7ea1ed6a718e383d9e1893e49f1a1b056935f18cf76b1e555",
+    "source_physics_sha256": "2a10b1f0a19888e011fec356d77d0debae753ada15bd5cd05159d78f7fcffa16",
+    "source_blend_sha256": "b9602ee3d181dac662255d09de878020cab34305bf2648110fdd42ffff00bcd2",
+    "reference_policy": "Existing teacher-reference previews were inspected; no third-party mesh or photograph pixels imported.",
+    "files": {
+      "anatomy-preview.png": "a835b75d29786a36c5227baec96078b1f19515eb1c22560c0b7e82bc032b2900",
+      "EndoForge_Anatomy.blend": "a9e555745d17286e3f69b73637e0e5d03ec956379a9b1412b4c832f8c5348eb0",
+      "meshes/SM_200.fbx": "ae7ad1ba927bdd1203a7b885c693711b3ecfdc61166d200386527ce502e6377a",
+      "meshes/SM_300.fbx": "b90928cbdd0a770a6034092e14eb3427beb526111d49718458ea6a304daace9c",
+      "meshes/SM_301.fbx": "1df637c33816ee4c8f43fef800545f538cd5347b8f87dca2bbf61f48b2004469",
+      "meshes/SM_310.fbx": "12c97a9aa852f6b3660b7387e87cd08e8996592d3a974a870caedcd1bd5a4aba",
+      "meshes/SM_311.fbx": "d2c5038f3637508eadb1838d5f149de4eeca14666d31737707d9eba39ad14a6a",
+      "meshes/SM_400.fbx": "3940302b9cab3aacc49306ab3d17454acae118d0261086abf885901b19e0731c",
+      "meshes/SM_401.fbx": "5c3f6c76d8ee2e7ed00578c3503fc522afdcbe8d6477778c628ee3a1f67ce9ea",
+      "physics-mesh.json": "d7f3adb7a01ec7b2efb6f8965a06ba9147037965f5eb34e86c15e4df945d27cf",
+      "README.md": "39541b9fa9d8c4b6e8129f5f016e37ed8a9e317834d0046f1966f301fa3877ff",
+      "scene.json": "dcf1efef5ea96968081098383d2f9a2e883b3d6718c7db45933114889e01a7ec",
+      "textures/ArterialLandmark_base.png": "b9a9848f6a24286a787882785074fe416face1ff64af272da47ad7fd6d4064b1",
+      "textures/ArterialLandmark_normal.png": "ede73623d39713e0ad5becd585c3a3916b24fcdad7a0eef461d2284f1f8f41c7",
+      "textures/ArterialLandmark_roughness.png": "0dee313dd346c6d5cbd042796688306a34f1a7b92b790714fc816d8fcf9da76b",
+      "textures/BiliaryDuct_base.png": "7a072aefb828a0248786d14f689fcf1c9faf477f3c3b36b740e627d19a2250c1",
+      "textures/BiliaryDuct_normal.png": "ce8695d3528d1629efb1d883e2cb253f54d0a5342d7f6bb3d1592a5a953aa98f",
+      "textures/BiliaryDuct_roughness.png": "aaeb222decea259c527c0ce4b77f462406b51c625883dfd0e2d4ec55615accb8",
+      "textures/GallbladderSerosa_base.png": "952cbdf151f16cfe79a990eccb5595ac9e82c5b34e15367fab66e5e2a70f3a5f",
+      "textures/GallbladderSerosa_normal.png": "87b52bbcb9897ed573e686963315b9e5beec27d62891a19d07e07aafffbcddc5",
+      "textures/GallbladderSerosa_roughness.png": "8f8240cf9692f712ecf9829ec0bc795f0143c8ea529cdd57dd6f0e6e328f46c2",
+      "textures/HepaticBedConnective_base.png": "44078f0d78468564c12d7aea1627ee3f9ac6a5bfd7a74300678ad40b312c6483",
+      "textures/HepaticBedConnective_normal.png": "cbd34f81710cfc9e9427a4695f2d279885827b25051260a4aa82aef4bf603b86",
+      "textures/HepaticBedConnective_roughness.png": "ec3cf8737c791e2c5d4d323ab02846c0cc31d8eb813273693170088ee5df5feb",
+      "textures/HepaticCapsule_base.png": "aaebf8aa9a50eac905e6425cc2e296df82efea42db4f24519a1b4b235eb935e9",
+      "textures/HepaticCapsule_normal.png": "8050504d5b28f42b9a0b57e28f4b6d54412b9ae7225b0369f5ac4f0071147e5b",
+      "textures/HepaticCapsule_roughness.png": "4704e42d6d6214fbe27278162d18bb71d6e8c8a6dfad116d3959c777b07c0b1b",
+      "textures/OmentalFat_base.png": "896535870a86e939247d67a93f65394289d098f599643d2a40a805ffbc2f94a0",
+      "textures/OmentalFat_normal.png": "b3b5cd71d2bef1e98dca35eda2f96b18bf438d62dc4d6933b5c1786d93989245",
+      "textures/OmentalFat_roughness.png": "e2db80126bbbcc17a59e67e1f8bfadde81635a5ccf9caf0c5fdea6200d694c46",
+      "textures/PeritonealLining_base.png": "ed6295e4b793cbef698df8ea23084a8470a7cc87c57bfa16ecf4f80433a7f4e4",
+      "textures/PeritonealLining_normal.png": "a9862539a103bd9b8718a8b11c666f7fcd92433424dbc0e531433939ec43408c",
+      "textures/PeritonealLining_roughness.png": "b77d6b62ac01ab89b7311d343235474db1ffa19ab49da46791147ef39d641b1f"
+    },
+    "postprocess_notes": "Restored unused hepatic-bed material and all21 relative texture links. Same-camera preview reused after exact scene/physics/texture equality; corrected camera comparison follows scope lights and does not change saved default camera.",
+    "current_candidate_script_sha256": "c95a2fe262e3eb024444e535eb117e16380b98eb6848384df370d5f3017668a6",
+    "integration_revision": "phase6-anatomy-v5-final-candidate",
+    "integration_at_utc": "2026-10-24T09:16:23.301017+00:00",
+    "integration_notes": "Candidate03 macroshape and unchanged FEM/attachments plus successful candidate16 authored rig/ready recipes; proposed camera adopted for upcoming UE validation. Blend camera synchronization pending."
+  },
+  "files": {
+    "anatomy-preview.png": "8c61dac2f385b72cce828ed0f7d3221531e0321126dd6d4740b2fd5980a8c965",
+    "asset-contract-check.json": "0f465b5ebd5b92836286ad3013315f08ecbffe8bcb02b95ec537efac203cd61c",
+    "blend-verification.json": "416568426cf19e91d1f814e2ed7089eeae535086980b380e719398e2739ccb11",
+    "EndoForge_Anatomy.blend": "0b78aaa2e2aaba036d962eb4afdbd4f1ceb3b6f220d0dc5cb773b4b669049265",
+    "independent-asset-audit.json": "fbdc41d0bfddb65c947e84ecb6858ea409e75f02687be749ac08f4aa34de9cbf",
+    "meshes/SM_200.fbx": "32ef9a57e6d91673a159976695f9175459cac1073724b0899017e066060e4e31",
+    "meshes/SM_300.fbx": "b90928cbdd0a770a6034092e14eb3427beb526111d49718458ea6a304daace9c",
+    "meshes/SM_301.fbx": "1df637c33816ee4c8f43fef800545f538cd5347b8f87dca2bbf61f48b2004469",
+    "meshes/SM_310.fbx": "12c97a9aa852f6b3660b7387e87cd08e8996592d3a974a870caedcd1bd5a4aba",
+    "meshes/SM_311.fbx": "d2c5038f3637508eadb1838d5f149de4eeca14666d31737707d9eba39ad14a6a",
+    "meshes/SM_400.fbx": "1819e364390ebea89e42e7f2a4dcc6f98ac32b5ff84d9bb1f91a598bc2282c43",
+    "meshes/SM_401.fbx": "c5683b4d1f1827eefc0a88194056dd127846f362d604c968612269b4332823a5",
+    "physics-mesh.json": "6d116d2752664ae4af3b638eee91c2be11f7ce22502091d147e1c6266ac3a37d",
+    "README.md": "726e9559e253627ad53ec4c9bffa43e687db4e9d623f0da173b0363036f461d7",
+    "scene.json": "27fddf1e46e2058d242f388773fe3abc93a307584023ac17c300ddff7fcde40d",
+    "textures/ArterialLandmark_base.png": "b9a9848f6a24286a787882785074fe416face1ff64af272da47ad7fd6d4064b1",
+    "textures/ArterialLandmark_normal.png": "ede73623d39713e0ad5becd585c3a3916b24fcdad7a0eef461d2284f1f8f41c7",
+    "textures/ArterialLandmark_roughness.png": "0dee313dd346c6d5cbd042796688306a34f1a7b92b790714fc816d8fcf9da76b",
+    "textures/BiliaryDuct_base.png": "7a072aefb828a0248786d14f689fcf1c9faf477f3c3b36b740e627d19a2250c1",
+    "textures/BiliaryDuct_normal.png": "ce8695d3528d1629efb1d883e2cb253f54d0a5342d7f6bb3d1592a5a953aa98f",
+    "textures/BiliaryDuct_roughness.png": "aaeb222decea259c527c0ce4b77f462406b51c625883dfd0e2d4ec55615accb8",
+    "textures/GallbladderSerosa_base.png": "952cbdf151f16cfe79a990eccb5595ac9e82c5b34e15367fab66e5e2a70f3a5f",
+    "textures/GallbladderSerosa_normal.png": "87b52bbcb9897ed573e686963315b9e5beec27d62891a19d07e07aafffbcddc5",
+    "textures/GallbladderSerosa_roughness.png": "8f8240cf9692f712ecf9829ec0bc795f0143c8ea529cdd57dd6f0e6e328f46c2",
+    "textures/HepaticBedConnective_base.png": "44078f0d78468564c12d7aea1627ee3f9ac6a5bfd7a74300678ad40b312c6483",
+    "textures/HepaticBedConnective_normal.png": "cbd34f81710cfc9e9427a4695f2d279885827b25051260a4aa82aef4bf603b86",
+    "textures/HepaticBedConnective_roughness.png": "ec3cf8737c791e2c5d4d323ab02846c0cc31d8eb813273693170088ee5df5feb",
+    "textures/HepaticCapsule_base.png": "aaebf8aa9a50eac905e6425cc2e296df82efea42db4f24519a1b4b235eb935e9",
+    "textures/HepaticCapsule_normal.png": "8050504d5b28f42b9a0b57e28f4b6d54412b9ae7225b0369f5ac4f0071147e5b",
+    "textures/HepaticCapsule_roughness.png": "4704e42d6d6214fbe27278162d18bb71d6e8c8a6dfad116d3959c777b07c0b1b",
+    "textures/OmentalFat_base.png": "896535870a86e939247d67a93f65394289d098f599643d2a40a805ffbc2f94a0",
+    "textures/OmentalFat_normal.png": "b3b5cd71d2bef1e98dca35eda2f96b18bf438d62dc4d6933b5c1786d93989245",
+    "textures/OmentalFat_roughness.png": "e2db80126bbbcc17a59e67e1f8bfadde81635a5ccf9caf0c5fdea6200d694c46",
+    "textures/PeritonealLining_base.png": "ed6295e4b793cbef698df8ea23084a8470a7cc87c57bfa16ecf4f80433a7f4e4",
+    "textures/PeritonealLining_normal.png": "a9862539a103bd9b8718a8b11c666f7fcd92433424dbc0e531433939ec43408c",
+    "textures/PeritonealLining_roughness.png": "b77d6b62ac01ab89b7311d343235474db1ffa19ab49da46791147ef39d641b1f"
+  },
+  "status": "integrated development candidate; final Phase6 acceptance pending",
+  "integration_script_sha256": "91cf42b7883c0cbdee8f3b0c5f1dfc3f2b377da2a0f7f5c54d669553e5209b2b",
+  "source_files": {
+    "Scripts/BlenderPhase6/audit_assets.py": "27055807f65c89fae4306f1c0c84f84cd1089389c0576e06e38d2810a8523c6b",
+    "Scripts/BlenderPhase6/audit_contract.py": "628ea7ed4536d3596f1b9fdd9ce56dc52545965eca63ecb818c9cd514e1665cf",
+    "Scripts/BlenderPhase6/build_anatomy_v3_candidate.py": "c95a2fe262e3eb024444e535eb117e16380b98eb6848384df370d5f3017668a6",
+    "Scripts/BlenderPhase6/build_assets.py": "a8d87ce82d03ea093876ea7d3521e92e22c9b5d5806859429e05fa9ca7856ace",
+    "Scripts/BlenderPhase6/finalize_anatomy_v5.py": "91cf42b7883c0cbdee8f3b0c5f1dfc3f2b377da2a0f7f5c54d669553e5209b2b",
+    "Scripts/BlenderPhase6/finalize_provenance.py": "5ffa78ad5b071eaa9f2db9d360e87c767345fb3c10ab2fef2b933fcc8f7f26da",
+    "Scripts/BlenderPhase6/verify_blend.py": "6d18cc5e3141cffdee84e8e9dc542ad31df858955f12d2abcc7576d3d92f9711",
+    "Scripts/BlenderPhase5/build_assets.py": "9f2096b0b46ffc2b071b7f629db77d3d741fe370c98f8f029efaa785488554f2"
+  },
+  "reference_inspection_evidence": [
+    "tmp/source-review/references/Cholecyst_CholecSeg8K_VID52_seg8k-contact.jpg",
+    "tmp/phase5-reference-review/male-reference-inferior.png"
+  ]
+}

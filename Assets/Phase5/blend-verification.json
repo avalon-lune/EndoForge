@@ -1,0 +1,32 @@
+{
+  "schema": "endoforge.native-blend-verification.v1",
+  "passed": true,
+  "blender_version": "5.2.2 LTS",
+  "blend_sha256": "23785c8a564453b5f997c8ab5dc9cd31df063812d8aa9f8565938475bb7fd68a",
+  "editable_objects": 13,
+  "texture_links_loaded": 21,
+  "native_reopen": true,
+  "texture_paths": [
+    "textures\\ArterialLandmark_base.png",
+    "textures\\ArterialLandmark_normal.png",
+    "textures\\ArterialLandmark_roughness.png",
+    "textures\\BiliaryDuct_base.png",
+    "textures\\BiliaryDuct_normal.png",
+    "textures\\BiliaryDuct_roughness.png",
+    "textures\\GallbladderSerosa_base.png",
+    "textures\\GallbladderSerosa_normal.png",
+    "textures\\GallbladderSerosa_roughness.png",
+    "textures\\HepaticBedConnective_base.png",
+    "textures\\HepaticBedConnective_normal.png",
+    "textures\\HepaticBedConnective_roughness.png",
+    "textures\\HepaticCapsule_base.png",
+    "textures\\HepaticCapsule_normal.png",
+    "textures\\HepaticCapsule_roughness.png",
+    "textures\\OmentalFat_base.png",
+    "textures\\OmentalFat_normal.png",
+    "textures\\OmentalFat_roughness.png",
+    "textures\\PeritonealLining_base.png",
+    "textures\\PeritonealLining_normal.png",
+    "textures\\PeritonealLining_roughness.png"
+  ]
+}

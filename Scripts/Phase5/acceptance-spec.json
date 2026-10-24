@@ -1,0 +1,19 @@
+{
+  "schema": "endoforge.phase5.acceptance.v1",
+  "scope": "New local gallbladder/liver/cavity engineering scene, contact grasping and state provenance; no suturing or clinical calibration",
+  "required": {
+    "preservation": "Exact membership, byte size and SHA-256 for every Phase1-4 delivery, Phase4 collision repair and original source reference",
+    "editable_assets": "Blender source scene, reproducible generator, independent original modeling provenance, SI units and geometry audit",
+    "mesh": "Finite coordinates, nondegenerate faces/tets, positive physical tetrahedron volumes, closed single-component liver and gallbladder boundary surfaces",
+    "hepatic_bed": "31 fixed spring endpoints reconstruct from actual hepatic triangle barycentrics within 1e-8m; declared apposed outer-wall gap; no recorded wall/liver triangle intersection or vertex containment on tested paths",
+    "interaction": "Both tools use actual unilateral friction contact, meaningful deformation, attachment retention, release and reset",
+    "collision": {"jaw_maximum_depth_mm": 0.15, "definition": "Physical node and whole-face penetration checked from recorded jaw geometry; declared finite paths, not CCD proof"},
+    "endurance": {"simulation_seconds_minimum": 600, "grasp_traction_release_cycles_minimum": 30, "terminal_safety_stops": 0},
+    "repeatability": {"runs": 5, "rms_node_tolerance_mm": 0.5, "events": "identical; immutable model, material and configuration identities required"},
+    "packaged_input": "Actual PlayerController input sequence and accepted native state; no direct tissue position injection",
+    "stereo_samples": {"sequences_minimum": 2, "frames_per_sequence_minimum": 12, "width": 640, "height": 512, "same_frozen_state": true, "fields": ["RGB", "Z depth in mm", "geometric normals with axes", "object IDs", "validity", "actual rendered mesh", "camera intrinsics/extrinsics", "frame/time/model identity"]},
+    "delivery": "Fresh ZIP extraction, launch and exact tested binary/source/asset hashes"
+  },
+  "performance_target": {"width": 1920, "height": 1080, "mean_display_fps": 30, "notes": "Report achieved FPS, physics step timing, actual simulation progression and test workload independently; do not present slow simulation as realtime"},
+  "external_review": "Tutor/clinician review of anatomy and experimental tissue-parameter validation remain separately labeled; engineering tests cannot supply those approvals"
+}
