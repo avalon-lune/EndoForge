@@ -148,6 +148,7 @@ bool ATrainingScene::UpdatePhase6Startup()
     if(!bPhase6StartupFenceQueued)
     {Phase6StartupFence.BeginFence(FRenderCommandFence::ESyncDepth::RHIThread);bPhase6StartupFenceQueued=true;return false;}
     if(bPhase6StartupFenceInvalidated || !Phase6StartupFence.IsFenceComplete())return false;
+    if(bPhase7){if(!ValidatePhase7Materials())return false;WritePhase5Manifest();}
     RestorePhase6StartupRendering();bPhase6StartupReady=true;
     if(auto* PC=UGameplayStatics::GetPlayerController(this,0))PC->FlushPressedKeys();
     bPhase6PerfBaselineValid=false;bPhase5CapturePrevious=true;
@@ -182,6 +183,14 @@ bool ATrainingScene::UpdatePhase6FoundationTest(float Dt)
         auto O=MakeShared<FJsonObject>();O->SetNumberField(TEXT("trial"),Phase6InputTrial);O->SetNumberField(TEXT("tool"),ActiveTool);
         O->SetNumberField(TEXT("time_s"),Now);O->SetNumberField(TEXT("state_id"),Bridge->GetStateId());O->SetBoolField(TEXT("after_release"),Stopped);
         O->SetField(TEXT("target_tip_cm"),P6Vector(ToolTips[ActiveTool]));O->SetField(TEXT("actual_tip_cm"),P6Vector(ActualTips[ActiveTool]));
+        if(bPhase7)
+        {
+            const auto& Input=Phase6Interaction.Tools[ActiveTool];
+            O->SetField(TEXT("intended_tip_cm"),P6Vector(Input.bHasManualIntent?Input.ManualIntentTipCm:ToolTips[ActiveTool]));
+            O->SetNumberField(TEXT("queued_command_seq"),Bridge->GetQueuedCommandSequence());
+            O->SetNumberField(TEXT("applied_command_seq"),Bridge->GetAppliedCommandSequence());
+            O->SetStringField(TEXT("target_semantics"),TEXT("Actual last queued wire target after outstanding-path budget; intended_tip_cm separately records bounded user intent. Hold commands resolve at native receipt."));
+        }
         Phase6MotionSamples.Add(MakeShared<FJsonValueObject>(O));
     };
     auto ObserveResponse=[&]()
@@ -264,6 +273,7 @@ bool ATrainingScene::UpdatePhase6FoundationTest(float Dt)
         SetTestKey(EKeys::R,false);
         if(Now-Phase6InputStarted>.8&&Bridge->HasAcknowledgedReset())
         {
+            ClosePhase7Progression(TEXT("render_proof"));
             bPhase6ProofInProgress=true;bPhase5CapturePrevious=true;
             Phase6ProofState=Bridge->GetStateId();Phase6ProofSimulation=Bridge->GetSimulationId();
             Phase6ProofCamera=BuildCameraRecord();Phase6ProofVariant=0;Phase6ProofTicks=0;
@@ -311,6 +321,7 @@ bool ATrainingScene::UpdatePhase6FoundationTest(float Dt)
             auto Image=MakeShared<FJsonObject>();Image->SetStringField(TEXT("variant"),Names[Phase6ProofVariant]);Image->SetStringField(TEXT("file"),Relative);
             Image->SetNumberField(TEXT("state_id"),Phase6ProofState);Image->SetNumberField(TEXT("simulation_id"),Phase6ProofSimulation);
             Image->SetObjectField(TEXT("camera"),Phase6ProofCamera);Image->SetObjectField(TEXT("cvars"),P6CVars());
+            if(bPhase7){Image->SetNumberField(TEXT("phase"),GetMilestone());Image->SetObjectField(TEXT("appearance"),BuildPhase7VisualSettings());Image->SetStringField(TEXT("visual_manifest_sha1"),AnatomyVisualFingerprint);}
             Image->SetBoolField(TEXT("exposure_locked"),Camera->PostProcessSettings.AutoExposureMethod==AEM_Manual);
             Image->SetBoolField(TEXT("displayed_geometry_frozen"),Bridge->GetStateId()==Phase6ProofState&&Bridge->GetSimulationId()==Phase6ProofSimulation);
             Image->SetBoolField(TEXT("native_simulation_paused"),false);Image->SetNumberField(TEXT("warmup_frames"),Phase6ProofTicks);
@@ -332,7 +343,8 @@ bool ATrainingScene::UpdatePhase6FoundationTest(float Dt)
 
 void ATrainingScene::WritePhase6Runtime()
 {
-    auto Runtime=MakeShared<FJsonObject>();Runtime->SetStringField(TEXT("schema"),TEXT("endoforge.phase6.runtime.v1"));Runtime->SetNumberField(TEXT("phase"),6);
+    auto Runtime=MakeShared<FJsonObject>();Runtime->SetStringField(TEXT("schema"),TEXT("endoforge.phase6.runtime.v1"));Runtime->SetNumberField(TEXT("phase"),GetMilestone());
+    if(bPhase7){Runtime->SetStringField(TEXT("schema"),bPhase9?TEXT("endoforge.phase9.runtime.v1"):bPhase8?TEXT("endoforge.phase8.runtime.v1"):TEXT("endoforge.phase7.runtime.v1"));Runtime->SetNumberField(TEXT("mechanics_phase"),6);Runtime->SetObjectField(TEXT("appearance"),BuildPhase7VisualSettings());Runtime->SetStringField(TEXT("visual_manifest_sha1"),AnatomyVisualFingerprint);}
     const bool Diagnostic=FParse::Param(FCommandLine::Get(),TEXT("LapDiagnostic"));
     Runtime->SetStringField(TEXT("run_kind"),bPhase6Test?(Diagnostic?TEXT("diagnostic_test"):TEXT("acceptance_test")):TEXT("interactive_observation"));
     Runtime->SetStringField(TEXT("rhi"),GDynamicRHI?GDynamicRHI->GetName():TEXT("unavailable"));FString Shader;GetFeatureLevelName(GMaxRHIFeatureLevel,Shader);Runtime->SetStringField(TEXT("shader_model"),Shader);
@@ -358,6 +370,11 @@ void ATrainingScene::WritePhase6Runtime()
     Performance->SetNumberField(TEXT("measured_wall_seconds"),Phase5MeasuredWall);Performance->SetNumberField(TEXT("measured_native_seconds"),Phase5MeasuredNative);
     Performance->SetNumberField(TEXT("display_measured_wall_seconds"),Wall);
     Performance->SetStringField(TEXT("progression_scope"),TEXT("All post-readiness live idle/recording progression; visible startup, frozen exports and post-freeze command-fence recovery excluded. New simulation IDs and mode changes rebuild baseline. Replay and replay-complete are excluded from solver throughput; normal replay display remains in FPS measurements."));
+    if(bPhase7)
+    {
+        Runtime->SetObjectField(TEXT("phase7_progression"),BuildPhase7ProgressionRecord());
+        Performance->SetStringField(TEXT("progression_scope"),TEXT("All post-readiness live idle/recording progression uses same-boundary wall/native observations immediately after every ordinary bridge read attempt. No-state polls retain elapsed wall time; no extrapolation or blocked-motion/slow-step exclusions. Explicit startup, frozen export, post-freeze fence, replay, simulation and mode boundaries close measured segments. Terminal polls are consumed before freeze/finish. Display FPS remains independently measured."));
+    }
     Performance->SetNumberField(TEXT("display_frames"),FrameMs.Num());Performance->SetNumberField(TEXT("physics_step_samples"),Phase6SolverTimes.Num());
     Performance->SetNumberField(TEXT("gpu_samples"),Phase6GpuTimes.Num());if(Phase6GpuTimes.Num())Performance->SetNumberField(TEXT("gpu_frame_ms"),P6Mean(Phase6GpuTimes));else Performance->SetField(TEXT("gpu_frame_ms"),MakeShared<FJsonValueNull>());
     Performance->SetStringField(TEXT("gpu_measurement"),TEXT("UE GPU frame timestamp samples when available; unavailable is null, not zero load"));
@@ -367,6 +384,7 @@ void ATrainingScene::WritePhase6Runtime()
     Performance->SetStringField(TEXT("workload_scope"),TEXT("One owned UE/native package pair. External concurrent workload absence is also an orchestration condition; this process cannot enumerate other users' workloads."));
     Runtime->SetObjectField(TEXT("performance"),Performance);Runtime->SetArrayField(TEXT("render_comparisons"),Phase6Comparisons);
     Runtime->SetStringField(TEXT("visual_binding"),TEXT("Bounded cubic PN display surface, maximum 0.12 mm from native linear boundary; actual rendered triangles are exported"));
+    if(bPhase9)Runtime->SetStringField(TEXT("visual_binding"),TEXT("Smooth radial-saturated cubic PN display, maximum 0.12 mm from native linear boundary; normals accumulated from actual microtriangles across equal material supports; actual rendered triangles are exported"));
     Runtime->SetNumberField(TEXT("dynamic_render_vertices"),TissueRenderData.Positions.Num());Runtime->SetNumberField(TEXT("dynamic_render_triangles"),TissueRenderData.Triangles.Num()/3);
     if(!bPhase6Test)
     {
@@ -375,7 +393,8 @@ void ATrainingScene::WritePhase6Runtime()
         UE_LOG(LogTemp,Display,TEXT("LAP_PHASE6_RUNTIME interactive observation saved; no acceptance result requested"));
         return;
     }
-    auto Interaction=MakeShared<FJsonObject>();Interaction->SetStringField(TEXT("schema"),TEXT("endoforge.phase6.interaction.v1"));Interaction->SetNumberField(TEXT("phase"),6);
+    auto Interaction=MakeShared<FJsonObject>();Interaction->SetStringField(TEXT("schema"),TEXT("endoforge.phase6.interaction.v1"));Interaction->SetNumberField(TEXT("phase"),GetMilestone());
+    if(bPhase7){Interaction->SetStringField(TEXT("schema"),bPhase9?TEXT("endoforge.phase9.interaction.v1"):bPhase8?TEXT("endoforge.phase8.interaction.v1"):TEXT("endoforge.phase7.interaction.v1"));Interaction->SetNumberField(TEXT("mechanics_phase"),6);}
     Interaction->SetStringField(TEXT("latency_definition"),TEXT("PlayerController input event to first accepted actual-tip displacement >0.05 mm observed by the UE actor; includes one possible actor-tick scheduling delay; not hardware motion-to-photon"));
     auto Metrics=MakeShared<FJsonObject>();Metrics->SetNumberField(TEXT("response_p95_ms"),P6Percentile(Phase6ResponseTimes,.95));Metrics->SetNumberField(TEXT("target_lead_max_mm"),Phase6PeakLead);Metrics->SetNumberField(TEXT("stop_residual_travel_max_mm"),Phase6MaxStopTravel);
     Interaction->SetObjectField(TEXT("metrics"),Metrics);Interaction->SetArrayField(TEXT("samples"),Phase6InputSamples);Interaction->SetArrayField(TEXT("stop_samples"),Phase6StopSamples);Interaction->SetArrayField(TEXT("motion_samples"),Phase6MotionSamples);

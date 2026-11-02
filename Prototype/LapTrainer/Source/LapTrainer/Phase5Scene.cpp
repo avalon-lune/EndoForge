@@ -1,4 +1,5 @@
 #include "TrainingScene.h"
+#include "Phase7AttachmentGeometry.h"
 #include "SimulationBridge.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SpotLightComponent.h"
@@ -110,7 +111,8 @@ void ATrainingScene::ApplyPhase5Material(UProceduralMeshComponent* Mesh,const TS
 {
     if(Material.IsValid()) for(const TCHAR* Key:{TEXT("base_color_texture"),TEXT("normal_texture"),TEXT("roughness_texture")})
     {FString Relative;if(Material->TryGetStringField(Key,Relative)&&!Relative.IsEmpty()){const FString Full=FPaths::ConvertRelativePathToFull(FPaths::Combine(AnatomyDirectory,Relative));if(!FPaths::IsUnderDirectory(Full,AnatomyDirectory)){AnatomyError=TEXT("Anatomy texture path must stay inside asset directory");return;}}}
-    auto* Base=LoadObject<UMaterialInterface>(nullptr,bPhase6?TEXT("/Game/Materials/M_AnatomyPhase6.M_AnatomyPhase6"):TEXT("/Game/Materials/M_Anatomy.M_Anatomy"));
+    const FString MaterialPath=bPhase7?CommonMaterialPath(TEXT("M_Anatomy")):bPhase6?TEXT("/Game/Materials/M_AnatomyPhase6.M_AnatomyPhase6"):TEXT("/Game/Materials/M_Anatomy.M_Anatomy");
+    auto* Base=LoadObject<UMaterialInterface>(nullptr,*MaterialPath);
     if(!Base) { AnatomyError=TEXT("M_Anatomy material missing; run asset generation"); Mesh->SetMaterial(0,TissueMaterial);return; }
     auto* M=UMaterialInstanceDynamic::Create(Base,this); FVector Color(.45,.2,.16);double Rough=.3,Metal=0;
     if(Material.IsValid())
@@ -122,7 +124,7 @@ void ATrainingScene::ApplyPhase5Material(UProceduralMeshComponent* Mesh,const TS
         if(Material->TryGetStringField(TEXT("base_color_texture"),Texture) && !Texture.IsEmpty())
         {
             const FString Path=FPaths::Combine(AnatomyDirectory,Texture);
-            if(UTexture2D* T=FImageUtils::ImportFileAsTexture2D(Path)) { M->SetTextureParameterValue(TEXT("BaseTexture"),T);M->SetScalarParameterValue(TEXT("TextureWeight"),1); Color=FVector::OneVector; }
+            if(UTexture2D* T=FImageUtils::ImportFileAsTexture2D(Path)) { if(bPhase7){T->AddressX=TA_Wrap;T->UpdateResource();}M->SetTextureParameterValue(TEXT("BaseTexture"),T);M->SetScalarParameterValue(TEXT("TextureWeight"),1); Color=FVector::OneVector; }
             else AnatomyError=TEXT("Anatomy texture missing: ")+Path;
         }
         for(int Map=0;Map<2;++Map)
@@ -131,7 +133,7 @@ void ATrainingScene::ApplyPhase5Material(UProceduralMeshComponent* Mesh,const TS
             if(Material->TryGetStringField(Key,Relative) && !Relative.IsEmpty())
             {
                 if(UTexture2D* TextureMap=FImageUtils::ImportFileAsTexture2D(FPaths::Combine(AnatomyDirectory,Relative)))
-                {TextureMap->SRGB=false;TextureMap->CompressionSettings=TC_VectorDisplacementmap;TextureMap->UpdateResource();M->SetTextureParameterValue(Map?TEXT("RoughnessTexture"):TEXT("NormalTexture"),TextureMap);double Strength=bPhase6?.45:.3;Material->TryGetNumberField(TEXT("normal_strength"),Strength);M->SetScalarParameterValue(Map?TEXT("RoughnessWeight"):TEXT("NormalWeight"),Map?1:Strength);}
+                {TextureMap->SRGB=false;TextureMap->CompressionSettings=TC_VectorDisplacementmap;if(bPhase7)TextureMap->AddressX=TA_Wrap;TextureMap->UpdateResource();M->SetTextureParameterValue(Map?TEXT("RoughnessTexture"):TEXT("NormalTexture"),TextureMap);double Strength=bPhase6?.45:.3;Material->TryGetNumberField(TEXT("normal_strength"),Strength);M->SetScalarParameterValue(Map?TEXT("RoughnessWeight"):TEXT("NormalWeight"),Map?1:Strength);}
                 else AnatomyError=TEXT("Anatomy PBR map missing: ")+Relative;
             }
         }
@@ -144,13 +146,43 @@ void ATrainingScene::ApplyPhase5Material(UProceduralMeshComponent* Mesh,const TS
         const TArray<TSharedPtr<FJsonValue>>* C=nullptr;
         if(Material->TryGetArrayField(TEXT("subsurface_color"),C)&&C->Num()>=3) M->SetVectorParameterValue(TEXT("SubsurfaceColor"),FLinearColor((*C)[0]->AsNumber(),(*C)[1]->AsNumber(),(*C)[2]->AsNumber(),1));
     }
-    M->SetScalarParameterValue(TEXT("Roughness"),Rough);M->SetScalarParameterValue(TEXT("Metallic"),Metal);Mesh->SetMaterial(0,M);
+    M->SetScalarParameterValue(TEXT("Roughness"),Rough);M->SetScalarParameterValue(TEXT("Metallic"),Metal);
+    if(bPhase7)
+    {
+        FVector Gain(1,1,1);double RoughnessScale=1,RoughnessBias=0;
+        if(Material.IsValid())
+        {
+            const TArray<TSharedPtr<FJsonValue>>* G=nullptr;
+            if(Material->TryGetArrayField(TEXT("base_color_gain"),G) && G->Num()==3) Gain=FVector((*G)[0]->AsNumber(),(*G)[1]->AsNumber(),(*G)[2]->AsNumber());
+            Material->TryGetNumberField(TEXT("roughness_scale"),RoughnessScale);Material->TryGetNumberField(TEXT("roughness_bias"),RoughnessBias);
+        }
+        if(Gain.ContainsNaN() || Gain.GetMin()<0 || Gain.GetMax()>2 || !FMath::IsFinite(RoughnessScale) || RoughnessScale<.25 || RoughnessScale>2 || !FMath::IsFinite(RoughnessBias) || FMath::Abs(RoughnessBias)>.3)
+        {AnatomyError=FString::Printf(TEXT("Invalid Phase%d material finish parameters"),GetMilestone());return;}
+        M->SetVectorParameterValue(TEXT("BaseColorGain"),FLinearColor(Gain.X,Gain.Y,Gain.Z,1));
+        M->SetScalarParameterValue(TEXT("RoughnessScale"),RoughnessScale);M->SetScalarParameterValue(TEXT("RoughnessBias"),RoughnessBias);
+        auto Applied=MakeShared<FJsonObject>();Applied->SetStringField(TEXT("component"),Mesh->GetName());Applied->SetStringField(TEXT("material_asset"),Base->GetPathName());
+        FString Name;if(Material.IsValid())Material->TryGetStringField(TEXT("name"),Name);Applied->SetStringField(TEXT("authored_name"),Name);
+        for(const TCHAR* Key:{TEXT("Roughness"),TEXT("Metallic"),TEXT("Specular"),TEXT("SubsurfaceOpacity"),TEXT("TextureWeight"),TEXT("NormalWeight"),TEXT("RoughnessWeight"),TEXT("RoughnessScale"),TEXT("RoughnessBias")})
+            Applied->SetNumberField(Key,M->K2_GetScalarParameterValue(FName(Key)));
+        for(const TCHAR* Key:{TEXT("BaseColor"),TEXT("BaseColorGain"),TEXT("SubsurfaceColor")})
+        {const FLinearColor C=M->K2_GetVectorParameterValue(FName(Key));Applied->SetArrayField(Key,{MakeShared<FJsonValueNumber>(C.R),MakeShared<FJsonValueNumber>(C.G),MakeShared<FJsonValueNumber>(C.B)});}
+        auto Address=MakeShared<FJsonObject>();
+        for(const TCHAR* Key:{TEXT("BaseTexture"),TEXT("NormalTexture"),TEXT("RoughnessTexture")})
+        {
+            if(auto* T=Cast<UTexture2D>(M->K2_GetTextureParameterValue(FName(Key))))
+                Address->SetStringField(Key,T->AddressX==TA_Wrap?TEXT("TA_Wrap"):T->AddressX==TA_Clamp?TEXT("TA_Clamp"):TEXT("TA_Mirror"));
+            else Address->SetField(Key,MakeShared<FJsonValueNull>());
+        }
+        Applied->SetObjectField(TEXT("texture_address_u"),Address);
+        Phase7MaterialRecords.Add(MakeShared<FJsonValueObject>(Applied));
+    }
+    Mesh->SetMaterial(0,M);
 }
 
 void ATrainingScene::CreatePhase5Environment()
 {
     if(!FParse::Value(FCommandLine::Get(),TEXT("LapAnatomyDir="),AnatomyDirectory))
-        AnatomyDirectory=FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(),bPhase6?TEXT("../../Assets/Phase6"):TEXT("../../Assets/Phase5")));
+        AnatomyDirectory=FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(),bPhase9?TEXT("../../Assets/Phase9"):bPhase8?TEXT("../../Assets/Phase8"):bPhase7?TEXT("../../Assets/Phase7"):bPhase6?TEXT("../../Assets/Phase6"):TEXT("../../Assets/Phase5")));
     AnatomyDirectory=FPaths::ConvertRelativePathToFull(AnatomyDirectory);
     FString Raw;
     if(!FFileHelper::LoadFileToString(Raw,*FPaths::Combine(AnatomyDirectory,TEXT("scene.json"))) ||
@@ -201,6 +233,22 @@ void ATrainingScene::CreatePhase5Environment()
         const TArray<TSharedPtr<FJsonValue>>* UV=nullptr;
         if(G->TryGetArrayField(TEXT("uvs"),UV)) for(const auto& U:*UV) { const auto& A=U->AsArray(); if(A.Num()==2) M.UV.Add(FVector2D(A[0]->AsNumber(),1-A[1]->AsNumber())); }
         A5Normals(M);
+        if(bPhase7)
+        {
+            // The hidden proxy supplies exported geometry. Its named shading
+            // normals must match the authored normals of the actual static LOD0.
+            if(!A5Vectors(G,TEXT("normals"),3,M.Positions.Num()))
+            {AnatomyError=FString::Printf(TEXT("Phase%d static display requires explicit authored shading normals"),GetMilestone());return;}
+            const auto& AuthoredNormals=G->GetArrayField(TEXT("normals"));
+            for(int I=0;I<M.Normals.Num();++I)
+            {
+                const FVector N=A5Read(AuthoredNormals[I]);
+                if(N.SizeSquared()<.99 || N.SizeSquared()>1.01)
+                {AnatomyError=FString::Printf(TEXT("Phase%d static authored normal is not a unit vector"),GetMilestone());return;}
+                M.Normals[I]=N.GetSafeNormal();
+            }
+            A5Tangents(M);
+        }
         const FString Name=O->GetStringField(TEXT("name"));
         auto* P=NewObject<UProceduralMeshComponent>(this,FName(*(TEXT("Anatomy_")+Name)));P->SetupAttachment(SceneRoot);P->SetCollisionEnabled(ECollisionEnabled::NoCollision);P->SetSimulatePhysics(false);P->RegisterComponent();
         P->CreateMeshSection_LinearColor(0,M.Positions,M.Triangles,M.Normals,M.UV,M.Colors,M.Tangents,false);
@@ -222,8 +270,8 @@ void ATrainingScene::CreatePhase5Environment()
 
 void ATrainingScene::InitializePhase5()
 {
-    bPhase5Test=FParse::Param(FCommandLine::Get(),TEXT("LapPhase5Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
-    if(!FParse::Value(FCommandLine::Get(),TEXT("LapCaptureDir="),Phase5Directory)) Phase5Directory=FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Phase5"),FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S")));
+    bPhase5Test=FParse::Param(FCommandLine::Get(),TEXT("LapPhase5Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase7Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase8Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase9Test"));
+    if(!FParse::Value(FCommandLine::Get(),TEXT("LapCaptureDir="),Phase5Directory)) Phase5Directory=FPaths::Combine(FPaths::ProjectSavedDir(),bPhase9?TEXT("Phase9"):bPhase8?TEXT("Phase8"):bPhase7?TEXT("Phase7"):TEXT("Phase5"),FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S")));
     Phase5Directory=FPaths::ConvertRelativePathToFull(Phase5Directory);IFileManager::Get().MakeDirectory(*Phase5Directory,true);Phase4Directory=Phase5Directory;
     for(auto S:SceneMeshes) S->SetHiddenInGame(true);
     for(int32 I=0;I<4;++I) { auto* P=NewObject<UProceduralMeshComponent>(this,FName(*FString::Printf(TEXT("AnatomyShaft%d"),I)));P->SetupAttachment(SceneRoot);P->SetCollisionEnabled(ECollisionEnabled::NoCollision);P->RegisterComponent();P->SetMaterial(0,I%2?InsulationMaterial.Get():MetalMaterial.Get());AnatomyRods.Add(P); }
@@ -248,10 +296,29 @@ void ATrainingScene::WritePhase5Manifest()
         O->SetStringField(TEXT("render_build"),TEXT("EndoForge Phase6 UE module ")+FString(ANSI_TO_TCHAR(__DATE__ " " __TIME__)));
         O->SetStringField(TEXT("material_interpretation"),TEXT("Original base PNG sRGB; roughness/normal linear. Blender V flipped for UE and normal green inverted. Authored normal_strength, specular, subsurface_color and subsurface_opacity. Opaque two-sided Subsurface shading, no WPO. Static mesh Lumen cards and hardware ray tracing; bounded cubic PN dynamic surface maximum 0.12mm. Labels export actual high-detail triangles; geometric normals exclude shader normal maps."));
     }
+    if(bPhase7)
+    {
+        O->SetNumberField(TEXT("phase"),GetMilestone());O->SetNumberField(TEXT("mechanics_phase"),6);
+        O->SetStringField(TEXT("render_build"),FString::Printf(TEXT("EndoForge Phase%d UE module "),GetMilestone())+FString(ANSI_TO_TCHAR(__DATE__ " " __TIME__)));
+        O->SetStringField(TEXT("asset_path_base"),FString::Printf(TEXT("Phase%d anatomy asset directory; shared Phase6 mechanics, separately qualified physical geometry bound by physics_fingerprint and physics-mesh SHA1; appearance identity is independent"),GetMilestone()));
+        O->SetObjectField(TEXT("appearance"),BuildPhase7VisualSettings());
+        O->SetArrayField(TEXT("applied_materials"),Phase7MaterialRecords);
+        auto UVSource=MakeShared<FJsonObject>();
+        UVSource->SetStringField(TEXT("schema"),TEXT("endoforge.phase7.dynamic_uv_source.v1"));
+        UVSource->SetStringField(TEXT("algorithm"),TEXT("periodic_u_triangle_unwrap_pole_mean_v1"));
+        UVSource->SetArrayField(TEXT("uvs"),AnatomyAsset->GetObjectField(TEXT("dynamic_surface"))->GetArrayField(TEXT("uvs")));
+        UVSource->SetStringField(TEXT("source_convention"),TEXT("Authored Blender UVs; native material_node_ids modulo source UV count; flip V as 1-v before interpolation."));
+        UVSource->SetStringField(TEXT("interpolation"),TEXT("For each actual source triangle, if maxU-minU>0.5 add1 to corner U<0.5. For a corner at V=0 or1 (epsilon1e-8), replace its U with mean of the other two unwrapped U. Interpolate using exported actual native-node barycentric bindings; positions unchanged."));
+        UVSource->SetStringField(TEXT("texture_address_u"),FString::Printf(TEXT("TA_Wrap explicitly applied to every Phase%d anatomy base, normal and roughness runtime texture"),GetMilestone()));
+        O->SetObjectField(TEXT("dynamic_uv_source"),UVSource);
+    }
     O->SetObjectField(TEXT("authored_materials"),AnatomyAsset->GetObjectField(TEXT("material_sets")));
+    if(bPhase8)O->SetStringField(TEXT("material_interpretation"),TEXT("Original base PNG sRGB; roughness/normal linear. Blender V flipped and normal green inverted; per-tissue recorded normal strength. Opaque two-sided short-distance Subsurface Profile; SubsurfaceOpacity is scatter contribution, not transparency. Actual profile MFP, scale and dual-lobe multipliers are recorded in appearance; legacy SubsurfaceColor is not used by this shading model. No WPO; unchanged bounded PN maximum 0.12mm. Actual displayed triangles drive geometry; normal maps affect shading only."));
+    if(bPhase9)O->SetStringField(TEXT("asset_path_base"),TEXT("Phase9 anatomy asset directory; compatible Phase6 solver with changed physical geometry requiring fresh qualification. Physics fingerprint and physics-mesh SHA1 bind the current physical asset; appearance identity remains separate."));
+    if(bPhase9)O->SetStringField(TEXT("material_interpretation"),TEXT("Original base PNG sRGB; roughness/normal linear. Blender V flipped and normal green inverted; recorded per-tissue strengths. Opaque two-sided short-distance Subsurface Profile; scatter contribution is not transparency. Actual profile settings are recorded. No WPO. Phase9 refined physical wall and smooth radial-saturated PN maximum 0.12mm; support-welded normals of actual display triangles. Those displayed triangles drive geometry outputs; normal maps affect shading only. Neutral-grey mode, when recorded, is diagnostic and not final material acceptance."));
     TArray<TSharedPtr<FJsonValue>> Lights;TArray<ULightComponent*> Components;GetComponents(Components);
     for(auto* Light:Components){auto L=MakeShared<FJsonObject>();L->SetStringField(TEXT("name"),Light->GetName());L->SetStringField(TEXT("class"),Light->GetClass()->GetName());L->SetNumberField(TEXT("intensity"),Light->Intensity);L->SetField(TEXT("position_cm"),A5V(Light->GetComponentLocation()));L->SetField(TEXT("forward"),A5V(Light->GetForwardVector()));const auto C=Light->GetLightColor();L->SetArrayField(TEXT("linear_color"),{MakeShared<FJsonValueNumber>(C.R),MakeShared<FJsonValueNumber>(C.G),MakeShared<FJsonValueNumber>(C.B)});L->SetBoolField(TEXT("cast_shadows"),Light->CastShadows);L->SetStringField(TEXT("intensity_units"),TEXT("candela"));if(auto* Spot=Cast<USpotLightComponent>(Light)){L->SetNumberField(TEXT("inner_cone_deg"),Spot->InnerConeAngle);L->SetNumberField(TEXT("outer_cone_deg"),Spot->OuterConeAngle);}Lights.Add(MakeShared<FJsonValueObject>(L));}O->SetArrayField(TEXT("lights"),Lights);
-    O->SetStringField(TEXT("exposure"),TEXT("manual exposure, physical-camera-exposure disabled, EV bias 0; no motion blur; stereo capture AA disabled, final-color-LDR PNG; main viewport may use project AA"));
+    O->SetStringField(TEXT("exposure"),bPhase7?TEXT("manual exposure and actual numeric settings recorded in appearance.actual_settings; physical-camera-exposure disabled; no motion blur; stereo capture AA disabled, final-color-LDR PNG; main viewport may use project AA"):TEXT("manual exposure, physical-camera-exposure disabled, EV bias 0; no motion blur; stereo capture AA disabled, final-color-LDR PNG; main viewport may use project AA"));
     const FString Manifest=FPaths::Combine(Dir,TEXT("visual-manifest.json"));A5Save(Manifest,O);AnatomyVisualFingerprint=HashFile(Manifest);
 }
 
@@ -271,8 +338,27 @@ void ATrainingScene::UpdatePhase5Attachment()
         // Native endpoints identify the exact outer wall node used by the physical spring.
         M.Positions.Add(A5Read((*Pair)[0],100));M.Positions.Add(A5Read((*Pair)[1],100));M.UV.Add(FVector2D(I*.1,0));M.UV.Add(FVector2D(I*.1,1));
     }
-    for(const auto& E:Edges) {const auto& V=E->AsArray();if(V.Num()!=2)continue;const int32* X=IdMap.Find(int32(V[0]->AsNumber()));const int32* Y=IdMap.Find(int32(V[1]->AsNumber()));if(X&&Y)M.Triangles.Append({*X,*Y,*Y+1,*X,*Y+1,*X+1});}
-    A5Normals(M);AnatomyAttachment->CreateMeshSection_LinearColor(0,M.Positions,M.Triangles,M.Normals,M.UV,M.Colors,M.Tangents,false);
+    if(bPhase7)
+    {
+        TArray<int32> NativeIds;for(const auto& Id:Ids)NativeIds.Add(int32(Id->AsNumber()));
+        TArray<FIntPoint> NativeEdges;for(const auto& E:Edges){const auto& V=E->AsArray();if(V.Num()==2)NativeEdges.Add(FIntPoint(int32(V[0]->AsNumber()),int32(V[1]->AsNumber())));}
+        FTrainingRenderMesh Ribbon;Phase7AttachmentGeometry::FBinding Binding;FString Failure;
+        if(!Phase7AttachmentGeometry::Build(NativeIds,M.Positions,NativeEdges,Ribbon,Binding,Failure))
+        {AnatomyError=FString::Printf(TEXT("Phase%d attachment visual: "),GetMilestone())+Failure;return;}
+        M=MoveTemp(Ribbon);A5Normals(M);
+        for(const auto& Pair:Binding.SeamVertexPairs){const FVector N=(M.Normals[Pair.X]+M.Normals[Pair.Y]).GetSafeNormal();M.Normals[Pair.X]=M.Normals[Pair.Y]=N;}
+        A5Tangents(M);
+        Phase7AttachmentBinding=Phase7AttachmentGeometry::ToJson(Binding,NativeEdges,Ids.Num());
+    }
+    else
+    {
+        for(const auto& E:Edges) {const auto& V=E->AsArray();if(V.Num()!=2)continue;const int32* X=IdMap.Find(int32(V[0]->AsNumber()));const int32* Y=IdMap.Find(int32(V[1]->AsNumber()));if(X&&Y)M.Triangles.Append({*X,*Y,*Y+1,*X,*Y+1,*X+1});}
+        A5Normals(M);
+    }
+    const auto* Section=AnatomyAttachment->GetProcMeshSection(0);
+    if(bPhase9 && Section && Section->ProcVertexBuffer.Num()==M.Positions.Num() && Section->ProcIndexBuffer.Num()==M.Triangles.Num())
+        AnatomyAttachment->UpdateMeshSection_LinearColor(0,M.Positions,M.Normals,M.UV,M.Colors,M.Tangents);
+    else AnatomyAttachment->CreateMeshSection_LinearColor(0,M.Positions,M.Triangles,M.Normals,M.UV,M.Colors,M.Tangents,false);
 }
 
 void ATrainingScene::UpdatePhase5Rods()
@@ -283,8 +369,15 @@ void ATrainingScene::UpdatePhase5Rods()
         const FVector P=GetPivot(T),Axis=(P-ActualTips[T]).GetSafeNormal(),Joint=ActualTips[T]+Axis*1.45;
         for(int32 J=0;J<2;++J)
         {
-            auto M=A5Cylinder(J?Joint+Axis*3:Joint+Axis*.25,J?P-Axis*.35:P+Axis*1.5,J?.205:.20);
-            AnatomyRods[T*2+J]->CreateMeshSection_LinearColor(0,M.Positions,M.Triangles,M.Normals,M.UV,M.Colors,M.Tangents,false);
+            const int32 I=T*2+J;
+            const FVector A=J?Joint+Axis*3:Joint+Axis*.25,B=J?P-Axis*.35:P+Axis*1.5;
+            const auto* Section=AnatomyRods[I]->GetProcMeshSection(0);
+            if(bPhase9 && Section && Phase9RodEndpoints[I*2]==A && Phase9RodEndpoints[I*2+1]==B)continue;
+            auto M=A5Cylinder(A,B,J?.205:.20);
+            if(bPhase9 && Section && Section->ProcVertexBuffer.Num()==M.Positions.Num() && Section->ProcIndexBuffer.Num()==M.Triangles.Num())
+                AnatomyRods[I]->UpdateMeshSection_LinearColor(0,M.Positions,M.Normals,M.UV,M.Colors,M.Tangents);
+            else AnatomyRods[I]->CreateMeshSection_LinearColor(0,M.Positions,M.Triangles,M.Normals,M.UV,M.Colors,M.Tangents,false);
+            Phase9RodEndpoints[I*2]=A;Phase9RodEndpoints[I*2+1]=B;
         }
     }
 }
@@ -476,6 +569,21 @@ TSharedRef<FJsonObject> ATrainingScene::BuildPhase5RenderGeometry() const
     {
         if(!P || (!P->IsVisible() && !(bPhase6 && AnatomyMeshes.Contains(P)))) return;const auto* S=P->GetProcMeshSection(0);if(!S) return;
         auto O=MakeShared<FJsonObject>();O->SetNumberField(TEXT("object_id"),Id);O->SetStringField(TEXT("name"),Name);
+        if(bPhase7&&Id==500&&Phase7AttachmentBinding.IsValid())O->SetObjectField(TEXT("attachment_visual_binding"),Phase7AttachmentBinding);
+        if(bPhase7&&Id==AnatomyGallbladderId)
+        {
+            TArray<TSharedPtr<FJsonValue>> Bindings;Bindings.Reserve(TissueRenderBindings.Num());
+            for(const auto& B:TissueRenderBindings)
+            {
+                Bindings.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
+                    MakeShared<FJsonValueNumber>(B.A),MakeShared<FJsonValueNumber>(B.B),MakeShared<FJsonValueNumber>(B.C),
+                    MakeShared<FJsonValueNumber>(B.Weight.X),MakeShared<FJsonValueNumber>(B.Weight.Y),MakeShared<FJsonValueNumber>(B.Weight.Z)}));
+                if(Bridge&&FPlatformTime::Seconds()-Heartbeat>.05){Bridge->TickFrozenBridge();Heartbeat=FPlatformTime::Seconds();}
+            }
+            O->SetArrayField(TEXT("render_bindings"),Bindings);
+            O->SetStringField(TEXT("render_bindings_layout"),TEXT("[native_node_index_A,native_node_index_B,native_node_index_C,weight_A,weight_B,weight_C] per actual displayed vertex"));
+            O->SetStringField(TEXT("dynamic_uv_algorithm"),TEXT("periodic_u_triangle_unwrap_pole_mean_v1"));
+        }
         TArray<TSharedPtr<FJsonValue>> V,N,T,UV;
         for(const auto& Q:S->ProcVertexBuffer)
         { V.Add(A5V(P->GetComponentTransform().TransformPosition(FVector(Q.Position))));N.Add(A5V(P->GetComponentTransform().TransformVectorNoScale(FVector(Q.Normal)).GetSafeNormal()));UV.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(Q.UV0.X),MakeShared<FJsonValueNumber>(Q.UV0.Y)}));if(bPhase6 && Bridge && FPlatformTime::Seconds()-Heartbeat>.05){Bridge->TickFrozenBridge();Heartbeat=FPlatformTime::Seconds();} }
@@ -492,6 +600,7 @@ TSharedRef<FJsonObject> ATrainingScene::BuildPhase5RenderGeometry() const
 bool ATrainingScene::CapturePhase5Stereo(const FString& Sequence,int32 Frame)
 {
     if(!Bridge || !Bridge->IsHealthy() || !Bridge->GetAcceptedState().IsValid()) return false;
+    ClosePhase7Progression(TEXT("frozen_capture"));
     bPhase5CapturePrevious=true;if(bPhase6)bResumeSnapshot=true;Bridge->TickFrozenBridge();
     constexpr int W=640,H=512; const FString Dir=FPaths::Combine(Phase5Directory,TEXT("dataset"),Sequence,FString::Printf(TEXT("%04d"),Frame));
     IFileManager::Get().MakeDirectory(*Dir,true);
@@ -520,6 +629,7 @@ bool ATrainingScene::CapturePhase5Stereo(const FString& Sequence,int32 Frame)
         for(int32 I=0;I+2<F.Num();I+=3) { A5Triangle T;T.Id=Id;for(int J=0;J<3;++J) T.P[J]=A5Read(V[int32(F[I+J]->AsNumber())]);Tris.Add(T); }
     }
     auto Record=MakeShared<FJsonObject>();Record->SetStringField(TEXT("schema"),TEXT("endoforge.phase5.stereo.v1"));Record->SetStringField(TEXT("sequence"),Sequence);Record->SetNumberField(TEXT("frame"),Frame);Record->SetObjectField(TEXT("native_state"),Bridge->GetAcceptedState());Record->SetStringField(TEXT("geometry"),TEXT("geometry.json"));Record->SetNumberField(TEXT("baseline_mm"),5);Record->SetNumberField(TEXT("dynamic_object_id"),AnatomyGallbladderId);Record->SetStringField(TEXT("visual_manifest"),TEXT("../../visual-manifest.json"));Record->SetStringField(TEXT("visual_manifest_sha1"),AnatomyVisualFingerprint);Record->SetStringField(TEXT("normal_winding_convention"),TEXT("ue_clockwise_cross_C_A_B_A"));Record->SetStringField(TEXT("pixel_convention"),TEXT("top-left origin; pixel centers x+0.5,y+0.5; no distortion; no AA; global shutter frozen displayed state"));Record->SetStringField(TEXT("normals"),TEXT("unit world front-face geometric normals = normalize(cross(C-A,B-A)) for UE clockwise triangles; distinct from shader normals"));
+    if(bPhase7){Record->SetNumberField(TEXT("phase"),GetMilestone());Record->SetNumberField(TEXT("mechanics_phase"),6);Record->SetObjectField(TEXT("appearance"),BuildPhase7VisualSettings());}
     Record->SetBoolField(TEXT("capture_hardware_ray_tracing_requested"),AnatomyCapture->bUseRayTracingIfEnabled);
     Record->SetNumberField(TEXT("capture_warmup_frames"),bPhase6?12:1);
     Record->SetStringField(TEXT("temporal_history"),bPhase6?TEXT("Persistent Lumen lighting history; 12 captures at each fixed eye pose, same frozen geometry. RGB has no AA or motion blur; geometric labels are exact current triangles, not temporally averaged."):TEXT("Single capture; no persistent history."));
@@ -602,6 +712,7 @@ void ATrainingScene::AdvancePhase5Test(int32 Stage)
         if(Stage==2)CapturePhase6Review(TEXT("phase6-workspace"));
         if(Stage==4){CapturePhase6Review(TEXT("phase6-jaw-contact"),true);CapturePhase6Review(TEXT("phase6-organ-closeup"),true);}
         if(Stage==8)CapturePhase6Review(TEXT("phase6-dual-traction"));
+        if(bPhase7ShapeReview && (Stage==2||Stage==8))CapturePhase7ShapeReview(Stage==2?TEXT("rest"):TEXT("dual-traction"));
     }
     StopTestMotion();for(const FKey& K:{EKeys::F,EKeys::C,EKeys::Two,EKeys::Three,EKeys::F5,EKeys::F6,EKeys::F7,EKeys::R})SetTestKey(K,false);
     Phase5Stage=Stage;Phase5Ticks=0;Phase5StageElapsed=0;Phase5Dwell=0;
@@ -630,6 +741,10 @@ void ATrainingScene::UpdatePhase5Test(float Dt)
     auto CaptureTo=[&](int Sequence,int Count)
     {
         if(FParse::Param(FCommandLine::Get(),TEXT("LapPhase5SkipDataset"))) return true;
+        // Phase8 checks correspondence at four frozen states only. These are
+        // internal regressions, not research sequences or a dataset deliverable.
+        // Keep historical milestones' original 24-frame exercise unchanged.
+        if(bPhase8)Count=Sequence?(Count>=8?1:0):(Count>=12?3:Count>=8?2:1);
         if(Phase5SequenceCounts[Sequence]>=Count) return true;
         if(Bridge->GetStepIndex()!=Phase5LastCapturedStep)
         {
@@ -752,11 +867,11 @@ void ATrainingScene::UpdatePhase5Test(float Dt)
 
 void ATrainingScene::FinishPhase5Test(const FString& Failure)
 {
-    if(bPhase5Finished)return;bPhase5Finished=true;StopTestMotion();for(const FName& Name:TArray<FName>(TestHeldKeys.Array()))SetTestKey(FKey(Name),false);
+    if(bPhase5Finished)return;ClosePhase7Progression(TEXT("finish"));bPhase5Finished=true;StopTestMotion();for(const FName& Name:TArray<FName>(TestHeldKeys.Array()))SetTestKey(FKey(Name),false);
     if(!Failure.IsEmpty())Phase5Failures.AddUnique(Failure);
     FlushPresentedStates();
     for(const FString& SnapshotOrRecordFailure:Phase4Failures)Phase5Failures.AddUnique(SnapshotOrRecordFailure);
-    auto O=MakeShared<FJsonObject>();O->SetStringField(TEXT("schema"),TEXT("endoforge.phase5.input_test.v1"));O->SetNumberField(TEXT("phase"),bPhase6?6:5);auto Checks=MakeShared<FJsonObject>();
+    auto O=MakeShared<FJsonObject>();O->SetStringField(TEXT("schema"),TEXT("endoforge.phase5.input_test.v1"));O->SetNumberField(TEXT("phase"),GetMilestone());if(bPhase7){O->SetNumberField(TEXT("mechanics_phase"),6);O->SetObjectField(TEXT("appearance"),BuildPhase7VisualSettings());O->SetStringField(TEXT("visual_manifest_sha1"),AnatomyVisualFingerprint);}auto Checks=MakeShared<FJsonObject>();
     Checks->SetBoolField(TEXT("anatomy_assets_loaded"),AnatomyError.IsEmpty()&&AnatomyMeshes.Num()>=3);
     Checks->SetBoolField(TEXT("left_contact_grip"),bPhase5Grip[0]);Checks->SetBoolField(TEXT("right_contact_grip"),bPhase5Grip[1]);Checks->SetBoolField(TEXT("traction_deforms"),bPhase5Traction);Checks->SetBoolField(TEXT("dual_hold"),bPhase5Dual);Checks->SetBoolField(TEXT("release_both"),bPhase5Release);Checks->SetBoolField(TEXT("preset_releases_latched_left"),bPhase5Release&&!Phase5Latches[0]);
     Checks->SetBoolField(TEXT("dual_traction_retained"),bPhase5DualTractionRetained);
@@ -771,7 +886,9 @@ void ATrainingScene::FinishPhase5Test(const FString& Failure)
     O->SetNumberField(TEXT("left_traction_displacement_mm"),Phase5LeftTractionMm);
     O->SetStringField(TEXT("traction_displacement_reference"),TEXT("maximum per-node distance from the accepted immediately post-grasp baseline, before the associated traction motion; not displacement from rest"));
     if(bPhase6)O->SetArrayField(TEXT("material_bound_ready_targets"),Phase6ReadyTargetSamples);
-    Checks->SetBoolField(TEXT("recorded"),bPhase5Record&&Phase5RecordLength>0);Checks->SetBoolField(TEXT("replay_completed"),bPhase5Replay&&bPhase5ReplayDone);Checks->SetBoolField(TEXT("snapshot"),Phase4SnapshotCount>0&&Phase4Failures.IsEmpty());Checks->SetBoolField(TEXT("stereo_frames"),Phase5DatasetFrames>=24);Checks->SetBoolField(TEXT("stereo_alignment"),Phase5DatasetFrames>=24&&!Phase5Failures.Contains(TEXT("Stereo capture failed")));Checks->SetBoolField(TEXT("healthy"),Bridge&&Bridge->IsHealthy()&&Bridge->GetSafetyStopCount()==0);Checks->SetBoolField(TEXT("penetration_bound"),Phase5PeakPenetrationMm<=.15);
+    const int32 RequiredAlignmentFrames=bPhase8?4:24;
+    Checks->SetBoolField(TEXT("recorded"),bPhase5Record&&Phase5RecordLength>0);Checks->SetBoolField(TEXT("replay_completed"),bPhase5Replay&&bPhase5ReplayDone);Checks->SetBoolField(TEXT("snapshot"),Phase4SnapshotCount>0&&Phase4Failures.IsEmpty());Checks->SetBoolField(TEXT("stereo_frames"),Phase5DatasetFrames>=RequiredAlignmentFrames);Checks->SetBoolField(TEXT("stereo_alignment"),Phase5DatasetFrames>=RequiredAlignmentFrames&&!Phase5Failures.Contains(TEXT("Stereo capture failed")));Checks->SetBoolField(TEXT("healthy"),Bridge&&Bridge->IsHealthy()&&Bridge->GetSafetyStopCount()==0);Checks->SetBoolField(TEXT("penetration_bound"),Phase5PeakPenetrationMm<=.15);
+    if(bPhase8)O->SetStringField(TEXT("alignment_scope"),TEXT("Four internal frozen-state correspondence regressions: rest, single traction, dual traction and release. Not research sequence delivery or downstream reader acceptance."));
     if(bPhase6) WritePhase6Runtime();
     bool Passed=Phase5Failures.IsEmpty();for(const auto& Pair:Checks->Values)Passed&=Pair.Value->AsBool();
     O->SetObjectField(TEXT("checks"),Checks);O->SetBoolField(TEXT("passed"),Passed);O->SetNumberField(TEXT("peak_displacement_mm"),Phase5PeakDisplacementMm);O->SetNumberField(TEXT("peak_node_penetration_mm"),Phase5PeakPenetrationMm);O->SetNumberField(TEXT("stereo_frames"),Phase5DatasetFrames);O->SetStringField(TEXT("model_id"),AnatomyModelId);O->SetStringField(TEXT("model_version"),AnatomyModelVersion);

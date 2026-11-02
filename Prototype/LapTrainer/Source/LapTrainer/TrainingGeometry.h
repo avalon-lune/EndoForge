@@ -33,5 +33,5 @@ namespace TrainingGeometry
         int32 Subdivisions, TArray<FTrainingSurfaceSample>& OutSamples, FTrainingRenderMesh& OutMesh);
     void UpdateBoundSurface(const TArray<FVector>& Positions, const TArray<FVector>& Normals,
         const TArray<FTrainingSurfaceSample>& Samples, FTrainingRenderMesh& Mesh,
-        double MaxSurfaceOffsetCm = 0.01);
+        double MaxSurfaceOffsetCm = 0.01, bool bSmoothOffsetBound = false);
 }

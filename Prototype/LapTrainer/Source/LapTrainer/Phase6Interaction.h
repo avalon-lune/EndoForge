@@ -14,6 +14,10 @@ struct FPhase6ToolInputState
     int32 ApproachWaypointIndex = 0;
     FVector LastDirection = FVector::ZeroVector;
     float LastRollDirection = 0;
+    // Phase7 retains the bounded user intent separately from the smaller
+    // command currently admitted by the outstanding transport path budget.
+    bool bHasManualIntent = false;
+    FVector ManualIntentTipCm = FVector::ZeroVector;
 };
 
 struct FPhase6InteractionState

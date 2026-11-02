@@ -69,13 +69,20 @@ $sdkVersion = [regex]::Match([IO.File]::ReadAllText($vcxproj), '<WindowsTargetPl
 if (-not $sdkVersion) { throw 'Cannot read Windows SDK version from the generated Visual Studio project.' }
 $exePath = Join-Path $runtime 'LapPhysics.exe'
 $exeInfo = Get-Item -LiteralPath $exePath
-foreach ($compiledSource in @('main.cpp','Phase2Model.h','Phase3Model.h','Phase4Session.h','Phase4Tests.h','Phase4CollisionTests.h','AnatomyAsset.h','Phase5Intersection.h','Phase5Tests.h','Phase6FEM.h','Phase6ReadyRecipes.h','Phase6ToolCollision.h','Phase6Tests.h')) {
+# Inventory every current top-level native header/source and CMake input.
+$nativeSourceNames = @(Get-ChildItem -LiteralPath $PSScriptRoot -File |
+    Where-Object { $_.Extension.ToLowerInvariant() -in @('.h','.cpp') -or $_.Name -eq 'CMakeLists.txt' } |
+    Sort-Object Name | Select-Object -ExpandProperty Name)
+# The production executable includes main.cpp and the headers; the separate
+# collision-test .cpp remains inventoried without becoming a runtime rebuild gate.
+foreach ($compiledSource in @($nativeSourceNames | Where-Object { $_ -eq 'main.cpp' -or [IO.Path]::GetExtension($_) -eq '.h' })) {
     if ((Get-Item -LiteralPath (Join-Path $PSScriptRoot $compiledSource)).LastWriteTimeUtc -gt $exeInfo.LastWriteTimeUtc) {
         throw "Source $compiledSource is newer than LapPhysics.exe. Rebuild before writing build metadata."
     }
 }
 $sourceHashes = [ordered]@{}
-foreach ($sourceName in @('main.cpp','Phase2Model.h','Phase3Model.h','Phase4Session.h','Phase4Tests.h','Phase4CollisionTests.h','AnatomyAsset.h','Phase5Intersection.h','Phase5Tests.h','Phase6FEM.h','Phase6ReadyRecipes.h','Phase6ToolCollision.h','Phase6Tests.h','Phase6ToolCollisionTests.cpp','test_phase6_tool_guard.py','test_phase6_tool_guard_suite.py','CMakeLists.txt','test_network.py','test_phase3_network.py','test_phase4_network.py','test_phase5_network.py','test_phase5_assets.py','test_phase5_replay_fixture.py','test_phase6_latency.py','run_phase6_regression.py','summarize_phase5_tests.py','RunPhase3Regression.ps1','RunPhase4Regression.ps1','build.ps1','stage-runtime.ps1','configs/flat.json','configs/curved.json','../Assets/Phase5/physics-mesh.json')) {
+$sourceNames = @($nativeSourceNames) + @('test_phase6_tool_guard.py','test_phase6_tool_guard_suite.py','test_network.py','test_phase3_network.py','test_phase4_network.py','test_phase5_network.py','test_phase5_assets.py','test_phase5_replay_fixture.py','test_phase6_latency.py','run_phase6_regression.py','summarize_phase5_tests.py','RunPhase3Regression.ps1','RunPhase4Regression.ps1','build.ps1','stage-runtime.ps1','configs/flat.json','configs/curved.json','../Assets/Phase5/physics-mesh.json')
+foreach ($sourceName in $sourceNames) {
     $sourceHashes[$sourceName] = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $sourceName) -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dependencies.json') -Raw | ConvertFrom-Json

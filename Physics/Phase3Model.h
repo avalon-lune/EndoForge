@@ -3,9 +3,12 @@
 #include <numeric>
 #include <queue>
 #include <sofa/simulation/MechanicalOperations.h>
+#include <sofa/simulation/task/MainTaskSchedulerRegistry.h>
+#include <sofa/simulation/task/TaskScheduler.h>
 #include "AnatomyAsset.h"
 #include "Phase5Intersection.h"
 #include "Phase6FEM.h"
+#include "Phase9FEM.h"
 #include "Phase6ToolCollision.h"
 
 // A thin tetrahedral FEM training layer. Cuts duplicate both thickness layers
@@ -13,14 +16,24 @@
 // discarded. This is bounded full-thickness cutting, not arbitrary organ cuts.
 struct TissueConfig {
     static constexpr double Phase6MinimumBilateralNormalN=.03,Phase6MinimumTotalInnerNormalN=.06,Phase6MaximumConstraintResidual=1e-5;
-    std::shared_ptr<AnatomyAsset> anatomy;bool phase6Assembly=false,phase6RegulatedGrip=false,phase6ContactDiagnostics=false;double phase6GapStrokeM=0;
+    std::shared_ptr<AnatomyAsset> anatomy;bool phase6Assembly=false,phase6RegulatedGrip=false,phase6ContactDiagnostics=false,phase9ProfileSerialFreeMotion=false;double phase6GapStrokeM=0;
+    json executionRuntime=nullptr;
     std::string name="flat"; double width=.12,length=.08,thickness=.0015,curvature=0,young=25000,poisson=.35,density=1000,rayleighMass=8,rayleighStiffness=.015,friction=.8;int fixedRows=1;
+    bool phase9Outputs()const{return anatomy&&anatomy->phase9Outputs();}
+    bool serialFreeMotion()const{return phase9ProfileSerialFreeMotion;}
+    json phase9ProfileProvenance()const{return {{"mode","Phase9ProfileSerialFreeMotion"},{"diagnostic_only",true},{"acceptance_eligible",false},{"scope","Serial free motion exposes SOFA worker timers; timings and checks are diagnostic, not production performance or acceptance evidence."}};}
     static TissueConfig preset(const std::string& name){TissueConfig c;if(name!="flat"&&name!="curved")throw std::invalid_argument("Unknown specimen");c.name=name;c.curvature=name=="curved"?.012:0;return c;}
     json data()const{json j={{"name",name},{"width_m",width},{"length_m",length},{"thickness_m",thickness},{"curvature_m",curvature},{"young_modulus_pa",young},{"poisson_ratio",poisson},{"density_kg_m3",density},{"rayleigh_mass",rayleighMass},{"rayleigh_stiffness",rayleighStiffness},{"friction",friction},{"fixed_rows",fixedRows},{"mesh_nx",25},{"mesh_ny",17},{"gravity_m_s2",{0,0,0}},{"contact_offset_m",.00045},{"alarm_distance_m",.0015}};if(anatomy){j["asset_fingerprint"]=anatomy->fingerprint;j["model_id"]=anatomy->source.at("model_id");j["model_version"]=anatomy->source.at("version");j["physics_model_version"]="phase5-tetra-wall-bound-bed-pairwise-v2";j["attachment_stiffness_n_m"]=anatomy->attachmentStiffness;j["attachment_damping_n_s_m"]=anatomy->attachmentDamping;j["liver_alarm_policy"]="max(minimum,contact_offset+observed_tissue_speed*substep+guard)";j["liver_alarm_minimum_m"]=.0008;j["liver_alarm_guard_m"]=.00015;j["liver_alarm_policy_version"]=1;if(phase6Assembly)j["assembly_implementation"]="phase6-equivalent-block-rotation-v1";if(phase6RegulatedGrip){const phase6collision::Settings guard;j["tool_motion_guard"]={{"implementation",phase6collision::Implementation},{"clearance_margin_m",guard.clearance_m},{"maximum_intervals",guard.maximum_intervals},{"maximum_depth",guard.maximum_depth},{"minimum_fraction",guard.minimum_fraction},{"static_geometry_asset_fingerprint",anatomy->fingerprint}};j["force_scope"]="soft_tissue_contact_impulse_only; rigid_liver_motion_guard_has_no_reaction_force";j["tool_pivots_m"]={jvec(anatomy->pivots[0]),jvec(anatomy->pivots[1])};j["grasp_controller_implementation"]=phase6GapStrokeM==0?"phase6-bilateral-load-latch-v1":"phase6-finite-gap-latch-diagnostic-v1";j["grasp_post_contact_gap_stroke_m"]=phase6GapStrokeM;j["grasp_post_contact_closure_rate_deg_s"]=40.;j["grasp_gap_reference"]="physical central inner-face gap, excluding collision offset";j["grasp_contact_diagnostics"]=phase6ContactDiagnostics;
             j["grasp_acquisition_minimum_inner_normal_n"]=Phase6MinimumBilateralNormalN;j["grasp_acquisition_minimum_total_inner_normal_n"]=Phase6MinimumTotalInnerNormalN;
             j["constraint_solver_settings"]={{"algorithm","NNCGConstraintSolver"},{"contact_compliance_regularization",0.},{"maximum_iterations",300},{"target_tolerance",1e-8},{"scale_tolerance",false},{"all_verified",true},{"sor",1.},{"maximum_accepted_residual",Phase6MaximumConstraintResidual}};
             j["adaptive_step_settings"]={{"substep_counts",{1,2,4,8,16}},{"maximum_node_travel_per_substep_m",thickness},{"coarsening_cooldown_frames",8},{"retry_state","rebuild_contact_graph_from_saved_positions_and_velocities"}};
-        }}return j;}
+        }}
+        if(phase6Assembly)j["execution_settings"]={{"implementation",phase9Outputs()?"phase9-four-thread-parallel-v1":"phase7-dense-liver-cpu-v1"},{"collision_pipeline_depth",12},{"parallel_collision_detection_and_free_motion",!serialFreeMotion()},{"parallel_ode_solving",false},{"parallel_inverse_product",true},{"loop_requested_threads",phase9Outputs()?4:0},{"linear_solver_requested_threads",4},{"shared_scheduler_policy",phase9Outputs()?"Explicit four-thread shared pool for concurrent collision/free motion and inverse products":"SOFA first initializer selects shared pool; loop default retained"},{"observed_runtime",executionRuntime}};
+        if(phase9ProfileSerialFreeMotion){j["diagnostic_provenance"]=phase9ProfileProvenance();if(phase6Assembly)j["execution_settings"]["diagnostic_provenance"]=phase9ProfileProvenance();}
+        if(phase9Outputs()&&phase6Assembly){j["assembly_implementation"]="phase9-exact-cache-coalesced-blocks-v2";j["linear_solver_implementation"]="SparseLDLSolver";j["linear_solver_precision"]="double";
+            j["recording_serialization"]="phase9-complete-jsonl-cached-rest-geometry-v1";
+            j["real_time_pacing"]={{"implementation","phase9-bounded-fixed-step-debt-v1"},{"fixed_dt_s",Dt},{"maximum_schedule_debt_s",.25},{"clock","steady_clock"},{"scope","Retain up to 250ms of schedule debt and execute actual fixed steps to repay it. Commands remain polled before each real solve. Rebase only beyond this bound; never extrapolate native time or fabricate steps."}};}
+        return j;}
     static TissueConfig fromAnatomy(const std::filesystem::path& path){TissueConfig c;c.name="gallbladder";c.anatomy=AnatomyAsset::load(path);c.thickness=c.anatomy->thickness;c.width=.032;c.length=.06;return c;}
     static TissueConfig parse(const json& j){
         if(!j.is_object()||!j.contains("name")||!j["name"].is_string())throw std::invalid_argument("Config requires specimen name");TissueConfig c=preset(j["name"].get<std::string>());
@@ -40,6 +53,10 @@ public:
     struct DSU {std::vector<int> p;explicit DSU(int n):p(n){std::iota(p.begin(),p.end(),0);}int get(int x){return p[x]==x?x:p[x]=get(p[x]);}void join(int a,int b){p[get(a)]=get(b);}};
     struct Tool {
         V tip,commanded,pivot;double roll=90,commandedRoll=90,closed=0,angle=40,holdAngle=40,force=0,slip=0,penetration=0;
+        // Phase9 telemetry only: these are signed world-space J^T lambda / h
+        // reactions on the prescribed jaws, never a handle-actuation force.
+        V contactResultantOnTool{0,0,0};std::array<V,2> jawContactResultantsOnTool{V(0,0,0),V(0,0,0)};
+        double contactForceSampleDuration=0;bool contactForceSampleValid=false;
         double innerNormalForce[2]{},closureRate=0,actualAngleRate=0;
         V innerPressureCenter[2]{V(0,0,0),V(0,0,0)};
         double innerConstraintNormalForce[2]{},innerConstraintTangentForce[2]{},innerFrictionMax[2]{};
@@ -67,7 +84,7 @@ public:
     std::map<Edge,std::vector<int>> edgeFaces;std::set<Edge> cuts;std::vector<double> masses;
     std::array<Tool,2> tools;int activeTool=0,resetId=0,revision=0,cutCount=0,components=1,safetyStops=0;
     bool healthy=true,paused=false,phase6Input=false;uint64_t frame=0,lastCommandSequence=0,appliedCommandSequence=0;double time=0,stepMs=0,maxDisp=0,cutLength=0,lastRebuildMs=0,minArea=1,minVolume=1,integrationStep=Dt,maxAcceptedSubstepTravel=0,maxAcceptedConstraintResidual=0;bool lastStepAccepted=true;int adaptiveRetries=0,lastSubsteps=1,preferredSubsteps=1,substepRecoveryFrames=0;
-    json rejectedStepQuality=nullptr;
+    json rejectedStepQuality=nullptr,executionDiagnostics=nullptr;
     std::string message="Grasper holds tissue; select scissors and close over membrane to cut";
     static Edge edge(int a,int b){return {std::min(a,b),std::max(a,b)};}
     explicit Membrane(const TissueConfig& cfg=TissueConfig{}):config(cfg){makeMesh();reset(0);}~Membrane(){if(root)sofa::simulation::node::unload(root);}
@@ -135,10 +152,14 @@ public:
         mapping.propagateXAndV(sofa::core::vec_id::write_access::freePosition,sofa::core::vec_id::write_access::freeVelocity);
     }
     void create(const std::vector<V>& x,const std::vector<V>& v){
+        if(config.phase9ProfileSerialFreeMotion&&!config.phase9Outputs())throw std::invalid_argument("Serial free-motion profiling requires the Phase9 physics output tag");
         auto sim=std::make_shared<sofa::simulation::graph::DAGSimulation>();sofa::simulation::Simulation::theSimulation=sim;root=sim->createNewGraph("EndoForgePhase3");root->setDt(H);root->setGravity(V(0,0,0));
-        add(root.get(),"FreeMotionAnimationLoop");solver=dynamic_cast<ConstraintSolver*>(add(root.get(),config.phase6RegulatedGrip?"NNCGConstraintSolver":"BlockGaussSeidelConstraintSolver",{{"name","contactSolver"},{"maxIterations","80"},{"tolerance","0.000001"},{"computeConstraintForces","true"}}).get());
+        // The dense-liver execution path retains every collision primitive and
+        // solver tolerance. Free motion and detection join before contact response.
+        auto animationLoop=config.phase6Assembly?(config.phase9Outputs()?add(root.get(),"FreeMotionAnimationLoop",{{"parallelCollisionDetectionAndFreeMotion",config.serialFreeMotion()?"false":"true"},{"nbThreads","4"}}):add(root.get(),"FreeMotionAnimationLoop",{{"parallelCollisionDetectionAndFreeMotion",config.serialFreeMotion()?"false":"true"}})):add(root.get(),"FreeMotionAnimationLoop");
+        solver=dynamic_cast<ConstraintSolver*>(add(root.get(),config.phase6RegulatedGrip?"NNCGConstraintSolver":"BlockGaussSeidelConstraintSolver",{{"name","contactSolver"},{"maxIterations","80"},{"tolerance","0.000001"},{"computeConstraintForces","true"}}).get());
         if(config.phase6RegulatedGrip){field(solver,"maxIterations","300");field(solver,"tolerance","0.00000001");field(solver,"scaleTolerance","false");field(solver,"allVerified","true");field(solver,"sor","1");}
-        add(root.get(),"CollisionPipeline",{{"depth","8"}});add(root.get(),"BruteForceBroadPhase");add(root.get(),"BVHNarrowPhase");
+        auto collisionPipeline=add(root.get(),"CollisionPipeline",{{"depth",config.phase6Assembly?"12":"8"}});add(root.get(),"BruteForceBroadPhase");add(root.get(),"BVHNarrowPhase");
         // Use SOFA's local feature-validity cones. External LMD filters are not
         // installed in this graph; setting useLMDFilters=true would bypass these
         // tests and admit artificial/back-facing edge contacts during oblique entry.
@@ -157,7 +178,7 @@ public:
         dofs=dynamic_cast<MO*>(add(body.get(),"MechanicalObject",{{"name","dofs"},{"template","Vec3d"},{"position",vecText(rest)},{"rest_position",vecText(rest)}}).get());
         add(body.get(),"DiagonalMass",{{"vertexMass",indices(masses)}});
         fastElasticity=nullptr;
-        if(config.phase6Assembly){auto elastic=sofa::core::objectmodel::New<Phase6FEM>();elastic->setName("elasticity");field(elastic,"method","large");field(elastic,"youngModulus",std::to_string(config.young));field(elastic,"poissonRatio",std::to_string(config.poisson));body->addObject(elastic);fastElasticity=elastic.get();}
+        if(config.phase6Assembly){sofa::core::sptr<Phase6FEM> elastic=config.phase9Outputs()?sofa::core::sptr<Phase6FEM>(sofa::core::objectmodel::New<Phase9FEM>()):sofa::core::objectmodel::New<Phase6FEM>();elastic->setName("elasticity");field(elastic,"method","large");field(elastic,"youngModulus",std::to_string(config.young));field(elastic,"poissonRatio",std::to_string(config.poisson));body->addObject(elastic);fastElasticity=elastic.get();}
         else add(body.get(),"TetrahedronFEMForceField",{{"name","elasticity"},{"method","large"},{"youngModulus",std::to_string(config.young)},{"poissonRatio",std::to_string(config.poisson)}});
         add(body.get(),"FixedProjectiveConstraint",{{"indices",indices(fixed)}});add(body.get(),"LinearSolverConstraintCorrection",{{"linearSolver","@linearSolver"},{"ODESolver","@integrator"},{"regularizationTerm",config.phase6RegulatedGrip?"0":"0.01"}});
         bedNodes.clear();bedDofs=nullptr;
@@ -169,7 +190,9 @@ public:
             for(size_t a=0;a<config.anatomy->attachmentIds.size();a++){
                 int material=config.anatomy->attachmentIds[a],node=-1;for(int i=0;i<layerNodes;i++)if(origins[i]==material){node=i;break;}
                 if(node<0)throw std::runtime_error("Missing liver bed material node");bedNodes.push_back(node);
-                springs<<node<<' '<<a<<' '<<config.anatomy->attachmentStiffness<<' '<<config.anatomy->attachmentDamping<<' '<<std::setprecision(15)<<length(rest[node]-config.anatomy->anchors[a])<<' ';
+                const double weight=config.anatomy->attachmentWeights.at(a);
+                if(config.anatomy->source.contains("attachment_vertex_weights"))springs<<std::setprecision(17);
+                springs<<node<<' '<<a<<' '<<config.anatomy->attachmentStiffness*weight<<' '<<config.anatomy->attachmentDamping*weight<<' '<<std::setprecision(15)<<length(rest[node]-config.anatomy->anchors[a])<<' ';
             }
             add(body.get(),"StiffSpringForceField",{{"name","liverBedAttachment"},{"object1","@dofs"},{"object2","@liverBedAnchors/dofs"},{"spring",springs.str()}});
         }
@@ -192,6 +215,25 @@ public:
         add(tray.get(),"MeshTopology",{{"name","topology"},{"position",plane},{"triangles",planeFaces}});add(tray.get(),"MechanicalObject",{{"name","dofs"},{"position",plane}});add(tray.get(),"TriangleCollisionModel",{{"group","2"},{"simulated","false"},{"moving","false"},{"contactFriction",std::to_string(config.friction)}});
         if(config.anatomy)for(auto type:{"LineCollisionModel","PointCollisionModel"})add(tray.get(),type,{{"group","2"},{"simulated","false"},{"moving","false"},{"contactFriction",std::to_string(config.friction)}});
         std::cout<<"Phase3 initializing graph nodes="<<rest.size()<<std::endl;sofa::simulation::node::initRoot(root.get());std::cout<<"Phase3 graph ready"<<std::endl;if(!dofs||!solver)throw std::runtime_error("Phase3 component unavailable");
+        if(config.phase6Assembly){
+            // Observe the already initialized shared scheduler. Do not create,
+            // reinitialize, or infer its size from a component's requested count.
+            auto value=[](Obj object,const char*name){auto*data=object->findData(name);if(!data)throw std::runtime_error(std::string("Missing execution data: ")+name);return data->getValueString();};
+            auto flag=[&](Obj object,const char*name){const auto text=value(object,name);if(text=="1"||text=="true")return true;if(text=="0"||text=="false")return false;throw std::runtime_error(std::string("Invalid execution flag: ")+name);};
+            const auto schedulerType=value(animationLoop,"taskSchedulerType");
+            const auto*scheduler=sofa::simulation::MainTaskSchedulerRegistry::getTaskScheduler(schedulerType);
+            if(!scheduler||scheduler->getThreadCount()<1)throw std::runtime_error("Shared execution scheduler unavailable after graph initialization");
+            if(config.phase9Outputs()&&scheduler->getThreadCount()!=4)throw std::runtime_error("Phase9 requires its declared four-thread shared scheduler");
+            config.executionRuntime={{"collision_pipeline_depth",std::stoi(value(collisionPipeline,"depth"))},{"parallel_collision_detection_and_free_motion",flag(animationLoop,"parallelCollisionDetectionAndFreeMotion")},{"parallel_ode_solving",flag(animationLoop,"parallelODESolving")},{"parallel_inverse_product",flag(linearSolver,"parallelInverseProduct")},{"shared_scheduler_type",schedulerType},{"shared_scheduler_effective_threads",scheduler->getThreadCount()},{"sampling_point","after_graph_initialization"}};
+            // SOFA rewrites a component's nbThreads only when that component
+            // initializes the shared pool. Thus first graph 8 and later graph 0
+            // can describe the same effective eight-thread configuration. Keep
+            // these raw observations visible, outside strict replay config.
+            executionDiagnostics={{"schema","endoforge.execution-initialization-diagnostics.v1"},{"loop_nb_threads_data",std::stoi(value(animationLoop,"nbThreads"))},{"linear_solver_nb_threads_data",std::stoi(value(linearSolver,"nbThreads"))},{"shared_scheduler_type",schedulerType},{"shared_scheduler_effective_threads",scheduler->getThreadCount()},{"sampling_point","after_graph_initialization"},{"scope","Raw component Data reflect initialization history; requested policy and effective scheduler remain in strict execution_settings."}};
+            if(config.phase9ProfileSerialFreeMotion)executionDiagnostics["diagnostic_provenance"]=config.phase9ProfileProvenance();
+            std::cout<<"Execution configuration "<<config.data().at("execution_settings").dump()<<std::endl;
+            std::cout<<"Execution diagnostics "<<executionDiagnostics.dump()<<std::endl;
+        }else{config.executionRuntime=nullptr;executionDiagnostics=nullptr;}
         auto pos=dofs->x.getValue(),vel=dofs->v.getValue();for(size_t i=0;i<x.size();i++){pos[i]=x[i];vel[i]=v[i];}dofs->x.setValue(pos);dofs->v.setValue(vel);dofs->xfree.setValue(pos);dofs->vfree.setValue(vel);
         synchronizeMappedState();updateJaws(true);
 
@@ -206,6 +248,7 @@ public:
         std::vector<V>x,v;rebuildTopology(x,v);create(x,v);resetId=id;revision++;cutCount=0;cutLength=0;time=0;maxDisp=0;healthy=true;paused=false;minArea=minVolume=1;maxAcceptedSubstepTravel=maxAcceptedConstraintResidual=0;lastStepAccepted=true;rejectedStepQuality=nullptr;if(config.phase6RegulatedGrip){lastSubsteps=preferredSubsteps=1;adaptiveRetries=substepRecoveryFrames=0;}message=config.anatomy?"Gallbladder ready - two frictional graspers and elastic liver-bed attachment":"Reset complete - intact membrane";
     }
     static void releaseTool(Tool&t){t.grasping=t.latched=false;t.anchorFace=-1;t.lost=0;t.closureRate=0;t.gripState="released";}
+    void invalidatePhase9ContactSamples(){if(config.phase9Outputs())for(auto&t:tools){t.contactResultantOnTool=V(0,0,0);t.jawContactResultantsOnTool={V(0,0,0),V(0,0,0)};t.contactForceSampleDuration=0;t.contactForceSampleValid=false;}}
     void release(int k,const std::string& reason){releaseTool(tools[k]);message=reason;}
     void stopInput(const std::string& reason){for(int k=0;k<2;k++){auto&t=tools[k];t.closed=0;t.commanded=t.tip;t.commandedRoll=t.roll;t.strokeEdges.clear();if(!liverMotionGuard)release(k,reason);}if(liverMotionGuard)message="Input stopped - opening requested; actual release awaits admitted jaw motion";}
     bool command(const json&j){
@@ -234,13 +277,18 @@ public:
     void updateJaws(bool snap=false){for(int k=0;k<2;k++)for(int j=0;j<2;j++){auto& t=tools[k];auto vertices=jawVertices(k,j);auto x=t.dofs[j]->x.getValue(),target=x,vel=t.dofs[j]->v.getValue();for(size_t i=0;i<vertices.size();i++){vel[i]=snap?V(0,0,0):(vertices[i]-x[i])/integrationStep;target[i]=vertices[i];}if(snap)t.dofs[j]->x.setValue(target);t.dofs[j]->xfree.setValue(target);t.dofs[j]->v.setValue(vel);t.dofs[j]->vfree.setValue(vel);}}
     void commitJaws(){for(int k=0;k<2;k++)for(int j=0;j<2;j++){auto vertices=jawVertices(k,j);auto x=tools[k].dofs[j]->x.getValue();for(size_t i=0;i<vertices.size();i++)x[i]=vertices[i];tools[k].dofs[j]->x.setValue(x);}}
     void contacts(){
-        const auto&lambda=solver->d_constraintForces.getValue();const auto&x=dofs->x.getValue();
+        const auto&lambda=solver->d_constraintForces.getValue();const auto&x=dofs->x.getValue();const bool phase9=config.phase9Outputs();
+        invalidatePhase9ContactSamples();
         for(int k=0;k<2;k++){auto&t=tools[k];t.contactCount=0;t.inner[0]=t.inner[1]=0;t.force=0;t.innerNormalForce[0]=t.innerNormalForce[1]=0;t.innerPressureCenter[0]=t.innerPressureCenter[1]=V(0,0,0);t.penetration=0;t.contactPoints.clear();std::vector<bool> rows(lambda.size(),false);
             for(int j=0;j<2;j++){
                 t.innerConstraintNormalForce[j]=t.innerConstraintTangentForce[j]=t.innerFrictionMax[j]=0;t.innerPositiveNormalContacts[j]=t.innerSaturatedContacts[j]=0;t.innerDiagnostics[j].clear();
                 for(auto*l:t.listeners[j])for(auto&group:l->getContactsVector())for(auto&c:group)if(c.value<.0001){t.contactCount++;bool first=c.elem.first.getCollisionModel()->getContext()==t.dofs[j]->getContext();V point=c.point[first?0:1],normal=first?V(c.normal):-V(c.normal);V innerNormal=t.poses[j].normal*(j?-1.:1.);if(dot3(point-t.poses[j].center,innerNormal)>JawT*.1&&dot3(normal,innerNormal)>.15){t.inner[j]++;t.contactPoints.emplace_back(c.point[first?1:0]);}}
                 auto&matrix=t.dofs[j]->c.getValue();for(auto row=matrix.begin();row!=matrix.end();++row)if(row.index()<rows.size()){
                     rows[row.index()]=true;
+                    // The mapped jaw Jacobian retains the sign and both friction
+                    // directions. Sum its nodal reactions once, without using
+                    // getLambda(), whose mapped storage can contain duplicates.
+                    if(phase9)for(auto col=row.begin();col!=row.end();++col)t.jawContactResultantsOnTool[j]+=col.val()*(double(lambda[row.index()])/integrationStep);
                     // Each Coulomb constraint has normal,tangent,tangent rows.
                     // Reconstruct the normal row's mapped contact point from J;
                     // use only the inner face and its normal impulse component.
@@ -265,6 +313,7 @@ public:
                 }
                 if(t.innerNormalForce[j]>0)t.innerPressureCenter[j]/=t.innerNormalForce[j];
             }
+            if(phase9)t.contactResultantOnTool=t.jawContactResultantsOnTool[0]+t.jawContactResultantsOnTool[1];
             for(size_t i=0;i+2<lambda.size();i+=3)if(rows[i])t.force+=std::sqrt(lambda[i]*lambda[i]+lambda[i+1]*lambda[i+1]+lambda[i+2]*lambda[i+2])/integrationStep;
             for(auto&p:t.poses)for(auto&q:x){V d=q-p.center;double a=JawL*.5-std::abs(dot3(d,p.axis)),b=JawW*.5-std::abs(dot3(d,p.side)),c=JawT*.5-std::abs(dot3(d,p.normal));if(a>0&&b>0&&c>0)t.penetration=std::max(t.penetration,std::min({a,b,c}));}
         }
@@ -330,7 +379,7 @@ public:
                 }
                 if(liverMotionGuard){
                     const auto admission=liverMotionGuard->admit(collisionPose(oldTools[k]),collisionPose(t));
-                    if(!admission.initial_valid){tools=oldTools;tools[k].motionGuard=admission;healthy=false;lastStepAccepted=false;message="Invalid rigid-liver starting pose - reset required";frame++;stepMs=std::chrono::duration<double,std::milli>(Clock::now()-start).count();return;}
+                    if(!admission.initial_valid){tools=oldTools;tools[k].motionGuard=admission;healthy=false;lastStepAccepted=false;invalidatePhase9ContactSamples();message="Invalid rigid-liver starting pose - reset required";frame++;stepMs=std::chrono::duration<double,std::milli>(Clock::now()-start).count();return;}
                     if(admission.accepted_fraction<1){const auto pose=phase6collision::interpolate(collisionPose(oldTools[k]),collisionPose(t),admission.accepted_fraction);
                         if(admission.accepted_fraction==0)t=oldTools[k];
                         t.tip=V(pose.tip.x,pose.tip.y,pose.tip.z);t.roll=std::remainder(pose.roll_deg,360.);t.angle=pose.angle_deg;
@@ -395,9 +444,10 @@ public:
                 for(const auto&f:triangles)minArea=std::min(minArea,length(cross3(prevX[f[1]]-prevX[f[0]],prevX[f[2]]-prevX[f[0]]))/length(cross3(rest[f[1]]-rest[f[0]],rest[f[2]]-rest[f[0]])));
                 for(const auto&tet:tets)minVolume=std::min(minVolume,dot3(prevX[tet[1]]-prevX[tet[0]],cross3(prevX[tet[2]]-prevX[tet[0]],prevX[tet[3]]-prevX[tet[0]]))/dot3(rest[tet[1]]-rest[tet[0]],cross3(rest[tet[2]]-rest[tet[0]],rest[tet[3]]-rest[tet[0]])));
               }
-                dofs->x.setValue(prevX);dofs->v.setValue(prevV);dofs->xfree.setValue(prevX);dofs->vfree.setValue(prevV);synchronizeMappedState();root->setTime(oldTime);tools=oldTools;for(int k=0;k<2;k++){tools[k].force=0;tools[k].innerNormalForce[0]=tools[k].innerNormalForce[1]=0;for(int j=0;j<2;j++){tools[k].innerConstraintNormalForce[j]=tools[k].innerConstraintTangentForce[j]=tools[k].innerFrictionMax[j]=0;tools[k].innerPositiveNormalContacts[j]=tools[k].innerSaturatedContacts[j]=0;tools[k].innerDiagnostics[j].clear();}tools[k].contactCount=0;tools[k].penetration=0;}updateJaws(true);safetyStops++;stopInput("Safety stop - open tools or reset");if(config.phase6RegulatedGrip||!finite||minVolume<.08||minArea<.035)healthy=false;}
+                dofs->x.setValue(prevX);dofs->v.setValue(prevV);dofs->xfree.setValue(prevX);dofs->vfree.setValue(prevV);synchronizeMappedState();root->setTime(oldTime);tools=oldTools;invalidatePhase9ContactSamples();for(int k=0;k<2;k++){tools[k].force=0;tools[k].innerNormalForce[0]=tools[k].innerNormalForce[1]=0;for(int j=0;j<2;j++){tools[k].innerConstraintNormalForce[j]=tools[k].innerConstraintTangentForce[j]=tools[k].innerFrictionMax[j]=0;tools[k].innerPositiveNormalContacts[j]=tools[k].innerSaturatedContacts[j]=0;tools[k].innerDiagnostics[j].clear();}tools[k].contactCount=0;tools[k].penetration=0;}updateJaws(true);safetyStops++;stopInput("Safety stop - open tools or reset");if(config.phase6RegulatedGrip||!finite||minVolume<.08||minArea<.035)healthy=false;}
             else{
                 if(releasedByMotion)message="Jaws opened - released";
+                if(config.phase9Outputs())for(auto&t:tools){t.contactForceSampleDuration=integrationStep;t.contactForceSampleValid=std::isfinite(length(t.contactResultantOnTool))&&std::isfinite(length(t.jawContactResultantsOnTool[0]))&&std::isfinite(length(t.jawContactResultantsOnTool[1]));}
                 time+=Dt;for(int k=0;k<2;k++)tools[k].actualAngleRate=(tools[k].angle-oldAngle[k])/Dt;if(phase6Input)appliedCommandSequence=lastCommandSequence;
                 for(int k=0;k<(config.anatomy?2:1);k++){auto&t=tools[k];
                     // A release request is not evidence that the jaws separated.
@@ -420,6 +470,14 @@ public:
     json toolState(int k)const{
         auto&t=tools[k];json jp=json::array();for(auto&p:t.poses)jp.push_back({{"center_m",jvec(p.center)},{"axis",jvec(p.axis)},{"side",jvec(p.side)},{"normal",jvec(p.normal)}});
         json result={{"tip_m",jvec(t.tip)},{"roll_deg",t.roll},{"jaw_open_fraction",t.angle/40},{"jaw_angle_deg",t.angle},{"grasping",t.grasping},{"force_n",t.force},{"contact_force_n",t.force},{"contact_count",t.contactCount},{"inner_contacts",{t.inner[0],t.inner[1]}},{"penetration_m",t.penetration},{"slip_distance_m",t.slip},{"grip_state",t.gripState},{"jaw_poses",jp},{"pivot_m",jvec(t.pivot)}};
+        if(config.phase9Outputs()){
+            result["contact_force_sample_valid"]=t.contactForceSampleValid;
+            result["contact_force_sample_duration_s"]=t.contactForceSampleValid?json(t.contactForceSampleDuration):json(nullptr);
+            result["contact_resultant_on_tool_n"]=t.contactForceSampleValid?jvec(t.contactResultantOnTool):json(nullptr);
+            result["contact_resultant_magnitude_n"]=t.contactForceSampleValid?json(length(t.contactResultantOnTool)):json(nullptr);
+            result["jaw_contact_resultants_on_tool_n"]=t.contactForceSampleValid?json{jvec(t.jawContactResultantsOnTool[0]),jvec(t.jawContactResultantsOnTool[1])}:json{nullptr,nullptr};
+            result["contact_force_sum_magnitudes_n"]=t.force;
+        }
         if(config.phase6RegulatedGrip){
             const auto&g=t.motionGuard;result["motion_guard"]={{"implementation",phase6collision::Implementation},{"blocked",g.blocked},{"reason",g.reason},{"accepted_fraction",g.accepted_fraction},{"initial_valid",g.initial_valid},{"witness_triangle",g.witness_triangle},{"clearance_margin_m",phase6collision::Settings{}.clearance_m},{"initial_clearance_m",g.initial_clearance_m},{"endpoint_clearance_m",g.endpoint_clearance_m},{"work_count",g.work_count}};
             result["inner_normal_force_n"]={t.innerNormalForce[0],t.innerNormalForce[1]};result["post_contact_requested_angle_rate_deg_s"]=t.closureRate;result["actual_jaw_angle_rate_deg_s"]=t.actualAngleRate;
@@ -435,8 +493,8 @@ public:
             if(config.phase6ContactDiagnostics){result["inner_constraint_diagnostics"]=json::array();for(int j=0;j<2;j++){json contacts=json::array();for(const auto&c:t.innerDiagnostics[j])contacts.push_back({{"constraint_normal_row",c.row},{"point_m",jvec(c.point)},{"jaw_jacobian_normal",jvec(c.normal)},{"normal_impulse_n_s",c.normalImpulse},{"tangent_impulses_n_s",{c.tangent1,c.tangent2}},{"integration_step_s",c.dt}});result["inner_constraint_diagnostics"].push_back(contacts);}}
         }return result;
     }
-    json hello(){return {{"type","hello"},{"protocol",3},{"units","m"},{"vertices",vertices()},{"triangles",triangles},{"topology_revision",revision},{"solver","SOFA TetrahedronFEM + friction contact; full-thickness mesh-edge fan splitting"},{"dt",Dt},{"material_validated",false},{"thickness_m",Thickness},{"mesh_spacing_m",.005},{"total_mass_kg",TotalMass},{"tool_count",2},{"pivot_m",jvec(tools[0].pivot)}};}
-    json state(){json j={{"type","state"},{"protocol",3},{"frame",frame},{"reset_id",resetId},{"time",time},{"vertices",vertices()},{"triangles",triangles},{"topology_revision",revision},{"cut_count",cutCount},{"cut_edge_count",cuts.size()},{"component_count",components},{"cut_length_m",cutLength},{"step_ms",stepMs},{"topology_rebuild_ms",lastRebuildMs},{"max_displacement_m",maxDisp},{"healthy",healthy},{"message",message},{"active_tool",activeTool},{"tools",{toolState(0),toolState(1)}},{"safety_stops",safetyStops},{"min_triangle_area_ratio",minArea},{"min_tet_volume_ratio",minVolume},{"adaptive_retries",adaptiveRetries},{"last_substeps",lastSubsteps}};auto first=toolState(0);for(auto&[key,value]:first.items())j[key]=value;if(phase6Input){j["adaptive_solver"]={{"accepted",lastStepAccepted},{"substeps",lastSubsteps},{"preferred_next_substeps",preferredSubsteps},{"coarsening_cooldown_remaining",substepRecoveryFrames},{"maximum_substep_node_travel_m",maxAcceptedSubstepTravel},{"maximum_constraint_residual",maxAcceptedConstraintResidual},{"measurement_scope",lastStepAccepted?"accepted_substeps":"rejected_final_attempt"},{"rejected_trial_quality",rejectedStepQuality}};j["interaction_version"]="phase6-bounded-position-hold-v1";j["last_command_seq"]=lastCommandSequence;j["applied_command_seq"]=appliedCommandSequence;j["manual_target_lead_limit_m"]=.001;j["manual_roll_lead_limit_deg"]=4;j["commanded_tips_m"]={jvec(tools[0].commanded),jvec(tools[1].commanded)};j["commanded_rolls_deg"]={tools[0].commandedRoll,tools[1].commandedRoll};}return j;}
+    json hello(){json j={{"type","hello"},{"protocol",3},{"units","m"},{"vertices",vertices()},{"triangles",triangles},{"topology_revision",revision},{"solver","SOFA TetrahedronFEM + friction contact; full-thickness mesh-edge fan splitting"},{"dt",Dt},{"material_validated",false},{"thickness_m",Thickness},{"mesh_spacing_m",.005},{"total_mass_kg",TotalMass},{"tool_count",2},{"pivot_m",jvec(tools[0].pivot)}};if(config.phase6Assembly)j["execution_diagnostics"]=executionDiagnostics;return j;}
+    json state(){json j={{"type","state"},{"protocol",3},{"frame",frame},{"reset_id",resetId},{"time",time},{"vertices",vertices()},{"triangles",triangles},{"topology_revision",revision},{"cut_count",cutCount},{"cut_edge_count",cuts.size()},{"component_count",components},{"cut_length_m",cutLength},{"step_ms",stepMs},{"topology_rebuild_ms",lastRebuildMs},{"max_displacement_m",maxDisp},{"healthy",healthy},{"message",message},{"active_tool",activeTool},{"tools",{toolState(0),toolState(1)}},{"safety_stops",safetyStops},{"min_triangle_area_ratio",minArea},{"min_tet_volume_ratio",minVolume},{"adaptive_retries",adaptiveRetries},{"last_substeps",lastSubsteps}};if(config.phase6Assembly)j["execution_diagnostics"]=executionDiagnostics;auto first=toolState(0);for(auto&[key,value]:first.items())j[key]=value;if(phase6Input){j["adaptive_solver"]={{"accepted",lastStepAccepted},{"substeps",lastSubsteps},{"preferred_next_substeps",preferredSubsteps},{"coarsening_cooldown_remaining",substepRecoveryFrames},{"maximum_substep_node_travel_m",maxAcceptedSubstepTravel},{"maximum_constraint_residual",maxAcceptedConstraintResidual},{"measurement_scope",lastStepAccepted?"accepted_substeps":"rejected_final_attempt"},{"rejected_trial_quality",rejectedStepQuality}};j["interaction_version"]="phase6-bounded-position-hold-v1";j["last_command_seq"]=lastCommandSequence;j["applied_command_seq"]=appliedCommandSequence;j["manual_target_lead_limit_m"]=.001;j["manual_roll_lead_limit_deg"]=4;j["commanded_tips_m"]={jvec(tools[0].commanded),jvec(tools[1].commanded)};j["commanded_rolls_deg"]={tools[0].commandedRoll,tools[1].commandedRoll};}return j;}
 };
 
 int selfTestPhase3(Membrane&t,const std::filesystem::path&out){

@@ -1,0 +1,277 @@
+{
+  "schema": "endoforge.phase7.original-appearance-provenance.v1",
+  "creator": "Avalon / EndoForge",
+  "script": "Scripts/BlenderPhase7/build_assets.py",
+  "script_sha256": "2c0598d0f7a53cf52001c26a4e2ab369f59b7629ecdb245cffb583e07cf7b529",
+  "authoring_dependencies": {
+    "audit_assets.py": "d8c2de9f303f17913f9c68f06fbea17f477c44ed4810921374f0dde4bf8e3462",
+    "audit_contract.py": "56ed88dcb2c70058909e90731d98d3de317cc21ab1ce6bb8f0d6171719b6b01a",
+    "audit_liver_geometry.py": "94cbfc03364581621404023dabe7138f1ab1186b4a3c5551565e2fe71ad676a7",
+    "bed_field.py": "2bc3d96619d7393070259dac244765bb51035ddb788b86c8b1aa2d5fe1533a52",
+    "build_assets.py": "2c0598d0f7a53cf52001c26a4e2ab369f59b7629ecdb245cffb583e07cf7b529",
+    "geometry_metrics.py": "4804427a82c979ed775ea1681e26239d4fb760506043885b4a1eaee9a2bcaa3b",
+    "organic_vessels.py": "b76831a9e0e76bb4d3b44376cb246b37cd3d19831044ec09ae69d8b44c6c77ee",
+    "rebuild_liver.py": "d2e07748859e414771b4651c7b6e26a615d49be477a1417f779e97cd40d94ee3",
+    "smooth_bed.py": "5498dd6430a68955197bc6f930a345ef11e07d92a7a20d3d64f157fe236452a6",
+    "verify_blend.py": "4547c4d29bd3a36e1770570f31302ed7c2bb749f1b2ccc327ce0f07f3ae623b7"
+  },
+  "physical_asset_sha256": "9405cfab1fb00e36290b242579d8ce4f085f6fa4505228aee72f723770a0de38",
+  "phase6_assets_unchanged": true,
+  "reference_policy": "Teacher laparoscopic images and anatomy atlas previews inspected visually only. No source imagery, meshes or photographic texels copied into generated assets.",
+  "reference_note": "tmp/phase7/reference-review/reference-review.md (local reference evidence, not redistributed)",
+  "geometry_changes": [
+    {
+      "id": 200,
+      "name": "Liver_HighPrecision_Capsule",
+      "vertices": 89160,
+      "triangles": 59440,
+      "maximum_geometry_change_m": null,
+      "contact_geometry_changed": true,
+      "shading_normals": "Smoothed source-normal field"
+    },
+    {
+      "id": 300,
+      "name": "LocalPeritonealCavity",
+      "vertices": 18721,
+      "triangles": 36864,
+      "maximum_geometry_change_m": 0.002842459399634524,
+      "contact_geometry_changed": false,
+      "shading_normals": "Area-weighted smooth normals"
+    },
+    {
+      "id": 301,
+      "name": "InferiorCavitySurface",
+      "vertices": 18193,
+      "triangles": 35840,
+      "maximum_geometry_change_m": 0.0018647246405777973,
+      "contact_geometry_changed": false,
+      "shading_normals": "Area-weighted smooth normals"
+    },
+    {
+      "id": 311,
+      "name": "LobulatedOmentalSkirt",
+      "vertices": 42657,
+      "triangles": 84480,
+      "maximum_geometry_change_m": 0.0049233488595156645,
+      "contact_geometry_changed": false,
+      "shading_normals": "Area-weighted smooth normals"
+    },
+    {
+      "id": 310,
+      "name": "AnteriorOmentalFold",
+      "vertices": 13065,
+      "triangles": 25600,
+      "maximum_geometry_change_m": 0.0046441646086388295,
+      "contact_geometry_changed": false,
+      "shading_normals": "Area-weighted smooth normals"
+    },
+    {
+      "id": 400,
+      "name": "CysticDuctLandmark",
+      "vertices": 1514,
+      "triangles": 3024,
+      "maximum_geometry_change_m": null,
+      "contact_geometry_changed": false,
+      "shading_normals": "Area-weighted smooth normals",
+      "geometry_change_note": "Original smooth orientation tube with rounded closed ends; topology changed, so a per-vertex displacement is not comparable."
+    },
+    {
+      "id": 401,
+      "name": "CysticArteryLandmark",
+      "vertices": 1514,
+      "triangles": 3024,
+      "maximum_geometry_change_m": null,
+      "contact_geometry_changed": false,
+      "shading_normals": "Area-weighted smooth normals",
+      "geometry_change_note": "Original smooth orientation tube with rounded closed ends; topology changed, so a per-vertex displacement is not comparable."
+    }
+  ],
+  "texture_statistics": [
+    {
+      "name": "GallbladderSerosa",
+      "mean_srgb": [
+        0.5108116269111633,
+        0.46760112047195435,
+        0.32458430528640747
+      ],
+      "std_srgb": [
+        0.06308434903621674,
+        0.06269165873527527,
+        0.018809044733643532
+      ],
+      "roughness_min": 0.17897777726700478,
+      "roughness_max": 0.3418268861436607,
+      "seed": 752
+    },
+    {
+      "name": "HepaticCapsule",
+      "mean_srgb": [
+        0.3157453238964081,
+        0.1519843488931656,
+        0.20853140950202942
+      ],
+      "std_srgb": [
+        0.018773440271615982,
+        0.012740274891257286,
+        0.021724913269281387
+      ],
+      "roughness_min": 0.16777303569469204,
+      "roughness_max": 0.33244375134836024,
+      "seed": 735
+    },
+    {
+      "name": "PeritonealLining",
+      "mean_srgb": [
+        0.49062737822532654,
+        0.3553768992424011,
+        0.367083877325058
+      ],
+      "std_srgb": [
+        0.030727673321962357,
+        0.023954959586262703,
+        0.01368879247456789
+      ],
+      "roughness_min": 0.22488734305255748,
+      "roughness_max": 0.38750386251532687,
+      "seed": 713
+    },
+    {
+      "name": "OmentalFat",
+      "mean_srgb": [
+        0.7552163600921631,
+        0.6078177094459534,
+        0.38448452949523926
+      ],
+      "std_srgb": [
+        0.024388499557971954,
+        0.03232303261756897,
+        0.022506030276417732
+      ],
+      "roughness_min": 0.23188121624768204,
+      "roughness_max": 0.38831094756151857,
+      "seed": 719
+    },
+    {
+      "name": "HepaticBedConnective",
+      "mean_srgb": [
+        0.6367398500442505,
+        0.49212297797203064,
+        0.4120846092700958
+      ],
+      "std_srgb": [
+        0.02331993170082569,
+        0.03503648191690445,
+        0.02378542721271515
+      ],
+      "roughness_min": 0.224221455635399,
+      "roughness_max": 0.3850777894427982,
+      "seed": 728
+    },
+    {
+      "name": "BiliaryDuct",
+      "mean_srgb": [
+        0.5545811653137207,
+        0.496667742729187,
+        0.37210091948509216
+      ],
+      "std_srgb": [
+        0.01368780992925167,
+        0.0133111122995615,
+        0.010984174907207489
+      ],
+      "roughness_min": 0.20897134124106548,
+      "roughness_max": 0.3745181269307524,
+      "seed": 738
+    },
+    {
+      "name": "ArterialLandmark",
+      "mean_srgb": [
+        0.4065530300140381,
+        0.17074625194072723,
+        0.1837363988161087
+      ],
+      "std_srgb": [
+        0.01711493916809559,
+        0.012920284643769264,
+        0.010797770693898201
+      ],
+      "roughness_min": 0.21121484574818777,
+      "roughness_max": 0.37804327872076543,
+      "seed": 725
+    }
+  ],
+  "physical_revision": {
+    "retained_phase6_fields": [
+      "schema",
+      "model_id",
+      "version",
+      "units",
+      "vertices_m",
+      "triangles",
+      "normals",
+      "uvs",
+      "thickness_m",
+      "fixed_vertex_ids",
+      "attachment_vertex_ids",
+      "attachment_anchor_positions_m",
+      "grasp_targets_m",
+      "home_tips_m",
+      "provenance",
+      "clinical_material_validated",
+      "hepatic_bed",
+      "phase6_liver_revision",
+      "tool_pivots_m",
+      "phase6_interaction"
+    ],
+    "changed_fields": [
+      "static_liver",
+      "attachment_anchor_bindings"
+    ],
+    "rebuild_report": "liver-rebuild-report.json",
+    "full_physical_requalification_required": true
+  },
+  "limitations": [
+    "Gallbladder remains the previous engineering shape; the liver is an original continuous engineering reconstruction requiring new physical qualification.",
+    "No patient-specific geometry, clinical tissue calibration or calibrated optical properties.",
+    "Cavity and omentum are non-contact context outside the supported operative workspace.",
+    "Independent imported UE geometry, moving-scene appearance and data alignment still require runtime acceptance."
+  ],
+  "files": {
+    "anatomy-preview.png": "0beb089ae13576d88579ed3452bf3e216863188ce047a51e4be9901c48b38f98",
+    "EndoForge_Anatomy.blend": "781a437059cb0feb00fbccbbb72b94b53ab7199b72cd4357773acfafd8106bdf",
+    "liver-geometry-check.json": "3fc365f202915e3946339291b4fc555343a2ca07a3165e99a0b3cf30eba77600",
+    "liver-rebuild-report.json": "002298d0c528080c1d6adb14063c38f322922933117a6b7373b2b171a24d1e9f",
+    "meshes/SM_200.fbx": "d2cc237a3492ccb66827704392ed6f569f3ffa6834db7b3671c6e2f506e528aa",
+    "meshes/SM_300.fbx": "7234732d14beadd930f91cccb24ee9fd2d98693086fb3f6a2813f30a1016b1e0",
+    "meshes/SM_301.fbx": "1ffcb7b52025f7b078d35ffc02244eef32ac23ebf5e7d80809f90754a17c1c91",
+    "meshes/SM_310.fbx": "a0d567c8aea4409e445b5c3b91101cd3d3801d14b5011bfa17aa86b6aff0f5f5",
+    "meshes/SM_311.fbx": "67f73384a46a721535c7f0aefdbc757d663d8e392fbb9251753a1b177ebac208",
+    "meshes/SM_400.fbx": "3aaf65777bbfb2b104ac5da3bf73dd0da31715063a148090f8a81fa0fe6bb200",
+    "meshes/SM_401.fbx": "8440f2d127da0e9bcc41c60e7ffa145d50a81ba3d359ad6e23311abf95afc764",
+    "physics-mesh.json": "9405cfab1fb00e36290b242579d8ce4f085f6fa4505228aee72f723770a0de38",
+    "README.md": "62f3ec65c1ea81cd937edd22a671194420d106dfc536f89fbd37d752cc7a6b58",
+    "scene.json": "45302a52a47ed233ab2359775437aca1984d6a478e12c63cfde3176c77a69dca",
+    "textures/ArterialLandmark_base.png": "4cca19fe51f3252d12db51c6ef3df3af44df59e2528f6876beaea40eaaf47c9d",
+    "textures/ArterialLandmark_normal.png": "5ea91ba2f20a04db844dba69a492ed371c87527a0d90a32b01c73edad0fe3848",
+    "textures/ArterialLandmark_roughness.png": "e797a358b45dede24705d34d9013c665bc60ea1f0dd46e715ea851bf909ce9ca",
+    "textures/BiliaryDuct_base.png": "36235ac2455b3eb8298dfbfa0904048e427801f38d56e5dccf1176679a252d10",
+    "textures/BiliaryDuct_normal.png": "783ccfe8505964af737c8094bd301dd52b3ad5f1bd9bc284a98d76106eed5d84",
+    "textures/BiliaryDuct_roughness.png": "fa79f494479fd288c700a2d3ce6fba27902554efc9a634cdbfe71c85c3e97d0d",
+    "textures/GallbladderSerosa_base.png": "a5f07176a74f655c3eca5cc3d21871c5232b6d93f1753589bc8f24e45662f1fc",
+    "textures/GallbladderSerosa_normal.png": "966aaefc3bfdc48ac8b25722a51c9daaf58b58845407fe079f33b205c2b2e9e6",
+    "textures/GallbladderSerosa_roughness.png": "da33bfac1a406d7e0d9e6b2ea11e13e6c0ff1df0c9d01d7213d38f5fb9faa5bf",
+    "textures/HepaticBedConnective_base.png": "7c6bf1d46e5042673a0abfb70b7432e597848fd427c3f52737eb21e4243770d4",
+    "textures/HepaticBedConnective_normal.png": "7621c0f77eea45b84eb3a523e20ccdf415a3f7aedeead0b4ea7fbaa24c206feb",
+    "textures/HepaticBedConnective_roughness.png": "b3d36fd9df1b82627eb589031a453464a66e7269643a04be90f1c741a06860a2",
+    "textures/HepaticCapsule_base.png": "e5e8a0dcbe2f45d2769ca1b7118d9ac14787efc9327324e00503aaf8aec20148",
+    "textures/HepaticCapsule_normal.png": "925d7bf7f680ab93763db663ebe2dd6a667a5e1da7f338fa8b584e9d83a29c4d",
+    "textures/HepaticCapsule_roughness.png": "6da7ad5f93ce8708aa637e92ec934ff2ee270403c2f4bd46e4d9641384f9732d",
+    "textures/OmentalFat_base.png": "81cdf914f1d799f207549b8371304376ceee98791899d13328a39fe1bed181bf",
+    "textures/OmentalFat_normal.png": "8e4b888f344935828ac7ee97a428a3537396fb5c00d9b39e39b35ed2eb5b2d47",
+    "textures/OmentalFat_roughness.png": "6a65f3869b9a6abe072288f975af60531e21216e58c5890d7b5f24be597fd831",
+    "textures/PeritonealLining_base.png": "677f4ce1abfc566792b5779d123f80f4254535af301bfaf90a88b38bbefdf1af",
+    "textures/PeritonealLining_normal.png": "c8003c8c62fe2326ca0d5c4d11960bbcfd9fb4d197ad6d5b6163b5ea006d720f",
+    "textures/PeritonealLining_roughness.png": "52a59b886b299e277d291cd189d6fa9423d9d4646b28b8f8ca5e9b1fa635df9e"
+  },
+  "metadata_amendment": "Corrected unmeasured displacement scalars for rebuilt orientation landmarks 400/401 to null after authoring. Physical, scene, Blender, FBX and texture bytes are unchanged."
+}

@@ -13,7 +13,7 @@ public:
     SOFA_CLASS(Phase6FEM,Base);
     Phase6FEM()=default;
     using Mat3=sofa::type::Mat<3,3,double>;
-    StiffnessMatrix elementMatrix(size_t id){
+    virtual StiffnessMatrix elementMatrix(size_t id){
         sofa::type::MatNoInit<6,12,double> transpose;transpose.transpose(strainDisplacements[id]);
         StiffnessMatrix local=strainDisplacements[id]*materialsStiffnesses[id]*transpose;
         if(method==SMALL)return local;
@@ -32,7 +32,7 @@ public:
             }
         }
     }
-    std::pair<double,double> compareWithSofaReference(){
+    virtual std::pair<double,double> compareWithSofaReference(){
         double maximumAbsolute=0,maximumRelative=0;
         for(size_t id=0;id<_indexedElements->size();id++){
             Transformation rotation;if(method==SMALL)rotation.identity();else rotation=rotations[id];

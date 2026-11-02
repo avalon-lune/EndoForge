@@ -1,0 +1,3 @@
+# Preserve exact historical helper bytes, including their original line endings.
+*.py -text !eol
+*.ps1 -text !eol

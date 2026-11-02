@@ -1,0 +1,25 @@
+{
+  "candidate": "Assets\\Phase7\\physics-mesh.json",
+  "sha256": "9405cfab1fb00e36290b242579d8ce4f085f6fa4505228aee72f723770a0de38",
+  "closed_mesh": {
+    "vertices": 7432,
+    "triangles": 14860,
+    "closed_oriented": true,
+    "signed_volume_m3": 0.0013129964456345237
+  },
+  "self_intersections": {
+    "broad_pairs": 110687,
+    "nonadjacent": 0,
+    "adjacent_contracted_interiors": 0
+  },
+  "gallbladder": {
+    "intersecting_triangle_pairs": 0,
+    "contained_vertices": 0,
+    "winding_error": 1.4135798584282297e-16,
+    "whole_triangle_clearance_mm": 0.5110117464211027,
+    "distance_pairs_tested": 8680,
+    "examples": []
+  },
+  "max_anchor_distance_m": 0.0,
+  "passed": true
+}

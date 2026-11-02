@@ -65,6 +65,7 @@ void ATrainingScene::UpdatePhase6Motion(APlayerController* PC, float DeltaSecond
     }
     Control.PreviousActiveTool = ActiveTool;
     auto& Input = Control.Tools[ActiveTool];
+    if(bPhase7&&Input.bHasManualIntent&&!Input.bPositionTarget)ToolTip=Input.ManualIntentTipCm;
     const bool Fine = PC->IsInputKeyDown(EKeys::LeftControl);
     const bool Fast = PC->IsInputKeyDown(EKeys::LeftShift);
     const double SpeedCmS = Fine ? .5 : Fast ? 1.8 : 1.2;
@@ -118,6 +119,7 @@ void ATrainingScene::UpdatePhase6Motion(APlayerController* PC, float DeltaSecond
     }
     if (Input.bPositionTarget)
     {
+        if(bPhase7)Input.bHasManualIntent=false;
         Input.bHoldTip = Input.bHoldRoll = Input.bBoundedTarget = false;
         if (FVector::Distance(ToolTip, Actual->ActualTipCm) <= .002 &&
             FMath::Abs(FMath::FindDeltaAngleDegrees(Actual->RollDeg, ToolRoll)) <= .1f)
@@ -177,5 +179,6 @@ void ATrainingScene::UpdatePhase6Motion(APlayerController* PC, float DeltaSecond
     }
     Input.bMovingLastFrame = Moving;
     Input.bRollingLastFrame = Rolling;
+    if(bPhase7){Input.ManualIntentTipCm=ToolTip;Input.bHasManualIntent=true;}
     Control.MaximumTargetLeadMm = FMath::Max(Control.MaximumTargetLeadMm, FVector::Distance(ToolTip, Actual->ActualTipCm) * 10.);
 }

@@ -64,8 +64,14 @@ void USimulationBridge::InitializeBridge()
     { ExpectedProtocol = 3; PhysicsPort = 47323; }
     if (FParse::Param(FCommandLine::Get(), TEXT("LapPhase5")) || FParse::Param(FCommandLine::Get(), TEXT("LapPhase5Test")))
     { ExpectedProtocol = 5; PhysicsPort = 47327; RequestedSpecimen = TEXT("gallbladder"); }
-    bPhase6Commands=FParse::Param(FCommandLine::Get(),TEXT("LapPhase6")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
+    const bool bPhase9=FParse::Param(FCommandLine::Get(),TEXT("LapPhase9")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase9Test"));
+    const bool bPhase8=bPhase9 || FParse::Param(FCommandLine::Get(),TEXT("LapPhase8")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase8Test"));
+    bPhase7Commands=bPhase8 || FParse::Param(FCommandLine::Get(),TEXT("LapPhase7")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase7Test"));
+    bPhase6Commands=bPhase7Commands || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
     if(bPhase6Commands) { ExpectedProtocol=5;PhysicsPort=47329;RequestedSpecimen=TEXT("gallbladder"); }
+    if(bPhase7Commands) PhysicsPort=47331;
+    if(bPhase8) PhysicsPort=47351;
+    if(bPhase9) PhysicsPort=47391;
     int32 RequestedPort = PhysicsPort;
     if (FParse::Value(FCommandLine::Get(), TEXT("LapPhysicsPort="), RequestedPort) && RequestedPort > 1024 && RequestedPort <= 65535)
         PhysicsPort = RequestedPort;
@@ -132,6 +138,11 @@ void USimulationBridge::Disconnect(const FString& Reason)
     FrozenResumeFenceSequence = FrozenResumeAfterStateId = 0;
     FrozenResumeFenceSeconds = 0;
     bFrozenResumePending = false;
+    if(bPhase7Commands)
+    {
+        for(auto& Budget:Phase7ManualBudgets)Budget.Reset();
+        Phase7BudgetSimulation=MAX_uint64;Phase7BudgetActive=Phase7BudgetReset=-1;
+    }
     ForceNewton = 0;
     Status = Reason;
     NextConnectSeconds = FPlatformTime::Seconds() + 1.0;
@@ -192,12 +203,36 @@ void USimulationBridge::QueueCommand(const TArray<FLapToolCommand>& Commands, in
     if (!SendBuffer.IsEmpty() || Commands.Num() != 2) return;
     LastCommands = Commands;
     LastActiveTool = FMath::Clamp(ActiveTool, 0, 1);
+    if(bPhase7Commands)
+    {
+        if(Phase7BudgetSimulation!=SimulationId||Phase7BudgetReset!=ResetId||Phase7BudgetActive!=LastActiveTool||IsReplayLocked())
+        {
+            for(auto& Budget:Phase7ManualBudgets)Budget.Reset();
+            Phase7BudgetSimulation=SimulationId;Phase7BudgetReset=ResetId;Phase7BudgetActive=LastActiveTool;
+        }
+        for(int Index=0;Index<2;++Index)
+        {
+            auto& Input=LastCommands[Index];auto& Budget=Phase7ManualBudgets[Index];
+            if(Index!=LastActiveTool||!Input.bBoundedTarget||IsReplayLocked()||!HasAcknowledgedReset())
+            {Budget.Reset();continue;} // Exact presets and wheel pulses retain their position semantics.
+            const auto* Actual=GetToolState(Index);
+            const TArray<TSharedPtr<FJsonValue>>* Targets=nullptr;
+            if(!Actual||!AcceptedState.IsValid()||!AcceptedState->TryGetArrayField(TEXT("commanded_tips_m"),Targets)||Targets->Num()!=2)
+            {Budget.Reset();Input.bHoldTip=true;continue;}
+            const TArray<TSharedPtr<FJsonValue>>* Coordinates=nullptr;
+            if(!(*Targets)[Index]->TryGetArray(Coordinates)||Coordinates->Num()!=3)
+            {Budget.Reset();Input.bHoldTip=true;continue;}
+            const FVector NativeTarget((*Coordinates)[0]->AsNumber()*100,(*Coordinates)[1]->AsNumber()*100,(*Coordinates)[2]->AsNumber()*100);
+            const auto Queued=Budget.Queue(CommandSequence+1,AppliedCommandSequence,Actual->ActualTipCm,NativeTarget,Input.TipCm,Input.bHoldTip);
+            Input.TipCm=Queued.Tip;Input.bHoldTip=Queued.Hold;
+        }
+    }
     TSharedRef<FJsonObject> Command = MakeShared<FJsonObject>();
     Command->SetStringField(TEXT("type"), TEXT("command"));
     Command->SetNumberField(TEXT("seq"), static_cast<double>(++CommandSequence));
     Command->SetNumberField(TEXT("active_tool"), LastActiveTool);
     TArray<TSharedPtr<FJsonValue>> Tools;
-    for (const FLapToolCommand& Input : Commands)
+    for (const FLapToolCommand& Input : LastCommands)
     {
         TSharedRef<FJsonObject> Tool = MakeShared<FJsonObject>();
         TArray<TSharedPtr<FJsonValue>> Tip;
@@ -249,7 +284,24 @@ void USimulationBridge::TickDualBridge(float DeltaSeconds, const TArray<FLapTool
         if (FPlatformTime::Seconds() - ConnectStartedSeconds > 2.0) Disconnect(TEXT("Waiting for SOFA service"));
         return;
     }
+    const auto PreviousProgressionObservation=Phase7ProgressionObservation;
     ReceiveMessages();
+    if(bPhase7Commands)
+    {
+        // Pair the accepted native clock with this completed read attempt, even
+        // when the nonblocking socket delivered no newer state. Never timestamp
+        // only successful receives: doing so would conceal native/network stalls.
+        ++Phase7ProgressionObservation.PollId;
+        Phase7ProgressionObservation.WallSeconds=FPlatformTime::Seconds();
+        const bool DisconnectedDuringRead=NativeStateId==0&&PreviousProgressionObservation.StateId>0;
+        // A receive failure clears public bridge state. Retain the last valid
+        // observed native endpoint while charging this final read's wall time;
+        // UpdatePhase7Progression then explicitly closes the disconnect segment.
+        Phase7ProgressionObservation.NativeSeconds=DisconnectedDuringRead?PreviousProgressionObservation.NativeSeconds:NativeTime;
+        Phase7ProgressionObservation.SimulationId=DisconnectedDuringRead?PreviousProgressionObservation.SimulationId:SimulationId;
+        Phase7ProgressionObservation.Mode=DisconnectedDuringRead?PreviousProgressionObservation.Mode:std::string(TCHAR_TO_UTF8(*SessionMode));
+        Phase7ProgressionObservation.StateId=DisconnectedDuringRead?PreviousProgressionObservation.StateId:NativeStateId;
+    }
     if (!Socket) return;
     CheckFrozenResumeFence();
     const uint64 PreviousCommandSequence = CommandSequence;

@@ -35,7 +35,7 @@ void ATrainingHUD::DrawHUD()
     {
         Panel(M,M,430*U,137*U);
         T(TEXT("ENDO / FORGE"),M+18*U,M+11*U,1.43f,White);
-        T(S->IsPhase6()?TEXT("06   ANATOMY / LIGHT / BIMANUAL PHYSICS"):TEXT("05   GALLBLADDER / BIMANUAL TRACTION"),M+19*U,M+49*U,.76f,Teal);
+        T(S->IsPhase9()?TEXT("09   ANATOMY / SURFACE FOUNDATION"):S->IsPhase8()?TEXT("08   SHARED SCENE / RESEARCH FOUNDATION"):S->IsPhase7()?TEXT("07   ANATOMY / MATERIAL / COMMON FOUNDATION"):S->IsPhase6()?TEXT("06   ANATOMY / LIGHT / BIMANUAL PHYSICS"):TEXT("05   GALLBLADDER / BIMANUAL TRACTION"),M+19*U,M+49*U,.76f,Teal);
         T(S->GetToolName()+TEXT("   [C] SWITCH"),M+19*U,M+80*U,.74f,White);
         T(S->GetSessionStatus(),M+19*U,M+109*U,.58f,Muted);
         const float SX=W-M-290*U;

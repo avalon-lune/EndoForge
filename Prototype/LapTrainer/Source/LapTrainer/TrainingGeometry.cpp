@@ -208,23 +208,41 @@ void TrainingGeometry::BuildSurfaceBindings(const TArray<FVector>& RestPositions
 }
 
 void TrainingGeometry::UpdateBoundSurface(const TArray<FVector>& Positions, const TArray<FVector>& Normals,
-    const TArray<FTrainingSurfaceSample>& Samples, FTrainingRenderMesh& Mesh, double MaxSurfaceOffsetCm)
+    const TArray<FTrainingSurfaceSample>& Samples, FTrainingRenderMesh& Mesh, double MaxSurfaceOffsetCm, bool bSmoothOffsetBound)
 {
+    int32 PreviousA=INDEX_NONE,PreviousB=INDEX_NONE,PreviousC=INDEX_NONE;
+    FVector EAB,EBA,EAC,ECA,EBC,ECB,Center;
     for (int32 I = 0; I < Samples.Num(); ++I)
     {
         const FTrainingSurfaceSample& S = Samples[I];
         const FVector& A = Positions[S.A]; const FVector& B = Positions[S.B]; const FVector& C = Positions[S.C];
         const FVector& NA = Normals[S.A]; const FVector& NB = Normals[S.B]; const FVector& NC = Normals[S.C];
         const double U = S.Weight.X, V = S.Weight.Y, W = S.Weight.Z;
-        const FVector EAB = PNEdge(A, B, NA), EBA = PNEdge(B, A, NB), EAC = PNEdge(A, C, NA);
-        const FVector ECA = PNEdge(C, A, NC), EBC = PNEdge(B, C, NB), ECB = PNEdge(C, B, NC);
-        const FVector E = (EAB + EBA + EAC + ECA + EBC + ECB) / 6.0;
-        const FVector Center = E + (E - (A + B + C) / 3.0) * 0.5;
+        // Forty-five samples share one source face. Its cubic coefficients
+        // depend only on the current accepted physical state, not on a sample.
+        if(S.A!=PreviousA || S.B!=PreviousB || S.C!=PreviousC)
+        {
+            EAB=PNEdge(A,B,NA);EBA=PNEdge(B,A,NB);EAC=PNEdge(A,C,NA);
+            ECA=PNEdge(C,A,NC);EBC=PNEdge(B,C,NB);ECB=PNEdge(C,B,NC);
+            const FVector E=(EAB+EBA+EAC+ECA+EBC+ECB)/6.0;
+            Center=E+(E-(A+B+C)/3.0)*.5;
+            PreviousA=S.A;PreviousB=S.B;PreviousC=S.C;
+        }
         const FVector PN = A * (U * U * U) + B * (V * V * V) + C * (W * W * W) +
             3.0 * (EAB * (U * U * V) + EBA * (U * V * V) + EAC * (U * U * W) +
                 ECA * (U * W * W) + EBC * (V * V * W) + ECB * (V * W * W)) + Center * (6.0 * U * V * W);
         const FVector Linear = A * U + B * V + C * W;
-        Mesh.Positions[I] = Linear + (PN - Linear).GetClampedToMaxSize(MaxSurfaceOffsetCm);
+        FVector Offset=PN-Linear;
+        if(bSmoothOffsetBound && MaxSurfaceOffsetCm>0)
+        {
+            // Smooth radial saturation has no derivative kink at the offset
+            // bound. It preserves shared-edge equality and the same strict
+            // distance envelope from each authoritative physical triangle.
+            const double D=Offset.Size();
+            if(D>1e-12)Offset*=MaxSurfaceOffsetCm*FMath::Tanh(D/MaxSurfaceOffsetCm)/D;
+        }
+        else Offset=Offset.GetClampedToMaxSize(MaxSurfaceOffsetCm);
+        Mesh.Positions[I] = Linear + Offset;
         const FVector N = (NA * U + NB * V + NC * W).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
         Mesh.Normals[I] = N;
         FVector T = FVector::ForwardVector - N * N.X;

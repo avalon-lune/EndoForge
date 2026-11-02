@@ -1,0 +1,243 @@
+{
+  "acceptance": "local_engineering_only",
+  "archive": {
+    "bytes": 1234516248,
+    "name": "EndoForge-Phase8-Windows-20261028-r1.zip",
+    "path": "output/Phase8/EndoForge-Phase8-Windows-20261028-r1.zip",
+    "sha256": "f575a6de3b02f709dc304c7774372b58bc0df1347c806eb4b742a06fbcbfd392"
+  },
+  "author": "Avalon",
+  "checks": {
+    "archive_crc_sha256_exact_membership": true,
+    "candidate_gates_passed": true,
+    "fresh_contact_and_liver_geometry": true,
+    "fresh_engineering_visual_review": true,
+    "fresh_extracted_packaged_run": true,
+    "fresh_four_frame_alignment_and_snapshot": true,
+    "fresh_shipped_source_audits": true,
+    "prior_deliveries_and_references_unchanged": true
+  },
+  "clinical_review": "pending",
+  "created_at_utc": "2026-10-28T12:42:50.186147+00:00",
+  "current_images": {
+    "dual_traction": {
+      "bytes": 2353390,
+      "path": "docs/images/phase8/dual-traction.png",
+      "sha256": "57328f547f1c8b33ae7261dac75ddb4ce270f9ad02732af7e34d9eafc3f0a164",
+      "source": "output/verification/Phase8-Extracted-20261028-r1/phase6-dual-traction.png"
+    },
+    "jaw_contact": {
+      "bytes": 2368640,
+      "path": "docs/images/phase8/jaw-contact.png",
+      "sha256": "6a09b2b1b4cd32046087db62893b6d0f8e88e798f917045a1d591e4d6e9e736c",
+      "source": "output/verification/Phase8-Extracted-20261028-r1/phase6-jaw-contact.png"
+    },
+    "organ_closeup": {
+      "bytes": 2346220,
+      "path": "docs/images/phase8/organ-closeup.png",
+      "sha256": "0cf49f9c3ba37b72504013c289e5038d57dfba7f503a2eb71439ccbe0e2f4a53",
+      "source": "output/verification/Phase8-Extracted-20261028-r1/phase6-organ-closeup.png"
+    },
+    "workspace": {
+      "bytes": 2362625,
+      "path": "docs/images/phase8/workspace.png",
+      "sha256": "32b0636c9aa534b160552210239a4dbf91f9501267788c7c8525238b43dad0f6",
+      "source": "output/verification/Phase8-Extracted-20261028-r1/phase6-workspace.png"
+    }
+  },
+  "final_receipt": {
+    "path": "output/Phase8/phase8-final-verification.json",
+    "sha256": "5e30d82cf57024a636b0acbd57737b8552a324d9390a8dd992709981d199d195"
+  },
+  "fresh_contact_metrics": {
+    "grasping_states_per_tool": [
+      665,
+      262
+    ],
+    "interpolated_samples": 4536,
+    "jaw_travel_mm": [
+      80.48789736147563,
+      108.89281434022038
+    ],
+    "liver_enclosed_jaw_centers_including_overlap": 0,
+    "maximum_inter_tool_jaw_overlap_mm": 0.0,
+    "maximum_interpolated_depth_mm": 0.0,
+    "maximum_liver_surface_in_jaw_mm": 0.0,
+    "maximum_node_depth_mm": 0.0,
+    "maximum_whole_triangle_depth_mm": 0.0,
+    "minimum_tet_volume_ratio": 0.8051000798358929,
+    "minimum_triangle_area_ratio": 0.8615723459218673,
+    "reset_boundaries_not_interpolated": 4,
+    "simultaneous_grasping_states": 262,
+    "states_audited_including_overlap": 1518
+  },
+  "fresh_interaction_metrics": {
+    "response_p95_ms": 84.14179924875498,
+    "stop_residual_travel_max_mm": 0.9999999999999964,
+    "target_lead_max_mm": 1.0000000000000009
+  },
+  "fresh_interactive_performance": {
+    "capture_freeze_excluded": true,
+    "concurrent_acceptance_workloads": 0,
+    "display_frames": 3016,
+    "display_measured_wall_seconds": 50.85148209705949,
+    "frame_p95_ms": 17.303327083587646,
+    "gpu_frame_ms": 7.204356726506028,
+    "gpu_measurement": "UE GPU frame timestamp samples when available; unavailable is null, not zero load",
+    "gpu_samples": 3016,
+    "height": 1080,
+    "mean_fps": 59.30997240637755,
+    "measured_native_seconds": 23.333333333333066,
+    "measured_wall_seconds": 23.982243202626705,
+    "physics_step_mean_ms": 21.860870903292664,
+    "physics_step_p95_ms": 31.87852020263672,
+    "physics_step_samples": 1457,
+    "progression_scope": "All post-readiness live idle/recording progression uses same-boundary wall/native observations immediately after every ordinary bridge read attempt. No-state polls retain elapsed wall time; no extrapolation or blocked-motion/slow-step exclusions. Explicit startup, frozen export, post-freeze fence, replay, simulation and mode boundaries close measured segments. Terminal polls are consumed before freeze/finish. Display FPS remains independently measured.",
+    "simulation_to_wall_ratio": 0.9729420695215631,
+    "width": 1920,
+    "workload_scope": "One owned UE/native package pair. External concurrent workload absence is also an orchestration condition; this process cannot enumerate other users' workloads."
+  },
+  "fresh_internal_alignment_frames": 4,
+  "fresh_liver_metrics": {
+    "broad_phase_candidate_pairs_tested_including_overlap": 6746888,
+    "clearance_original_state_indices": [
+      0,
+      30,
+      60,
+      90,
+      120,
+      150,
+      180,
+      210,
+      240,
+      270,
+      300,
+      330,
+      360,
+      390,
+      420,
+      450,
+      480,
+      510,
+      540,
+      570,
+      600,
+      630,
+      660,
+      690,
+      720,
+      750,
+      780,
+      810,
+      840,
+      870,
+      900,
+      930,
+      960,
+      990,
+      999,
+      1029,
+      1059,
+      1089,
+      1119,
+      1149,
+      1179,
+      1209,
+      1239,
+      1269,
+      1299,
+      1329,
+      1359,
+      1389,
+      1419,
+      1449,
+      1479,
+      1509
+    ],
+    "intersecting_or_touching_states_including_overlap": 0,
+    "maximum_winding_integer_error": 2.8271597168564594e-16,
+    "minimum_clearance_mm_among_distance_samples": 0.4499671041532706,
+    "stages_unique_original_states": {
+      "presented_state": 1517
+    },
+    "states_audited_including_overlap": 1518,
+    "unique_clearance_states_sampled": 52,
+    "wall_inside_liver_states_including_overlap": 0
+  },
+  "fresh_render_ablations": {
+    "gi_off": {
+      "changed_pixels_fraction_above_2_levels": 0.3674204282407407,
+      "rmse_8bit": 5.526721557150087
+    },
+    "reflections_off": {
+      "changed_pixels_fraction_above_2_levels": 0.04135947145061728,
+      "rmse_8bit": 2.824690914343386
+    },
+    "shadows_off": {
+      "changed_pixels_fraction_above_2_levels": 0.03089650848765432,
+      "rmse_8bit": 2.455711879136747
+    }
+  },
+  "game_exe_sha256": "fb2a8fca7a022b5f7d7a4d83290be6f5b0c4630d58a420522de574247aaa353a",
+  "inherited_native_metrics": {
+    "continuous_cycles": 50,
+    "continuous_simulation_seconds": 727.1666666666666,
+    "fresh_process_events_identical": true,
+    "fresh_process_maximum_force_difference_n": 2.2963561607802774e-11,
+    "fresh_process_maximum_node_rms_m": 2.9323627987780354e-13,
+    "fresh_process_maximum_single_node_difference_m": 7.898617396958788e-13,
+    "fresh_process_replay_repeats": 5,
+    "long_hold_cases": 15,
+    "long_hold_seconds_per_case": 120,
+    "matrix_cases": 9,
+    "maximum_reference_element_stiffness_difference_n_m": 0.0,
+    "minimum_tet_volume_ratio": 0.46816425240868104,
+    "minimum_triangle_area_ratio": 0.7637596727019993,
+    "native_case_count": 35,
+    "native_tcp": {
+      "accepted_command_response_p95_ms": 46.927899999900546,
+      "hold_response_p95_ms": 44.125900000153706,
+      "maximum_drift_after_hold_ack_mm": 0.0,
+      "maximum_stop_drift_mm": 0.5999999999999999,
+      "movement_response_p95_ms": 37.89469999992434,
+      "native_progress_s": 5.333333333333322,
+      "simulated_time_per_wall_time": 1.0015921245812793,
+      "wall_duration_s": 5.324855500000012
+    },
+    "peak_node_penetration_m": 0.0,
+    "same_process_maximum_node_rms_m": 0.0,
+    "same_process_replay_repeats": 5
+  },
+  "limitations": {
+    "appearance": "synthetic",
+    "clinical_review": "pending",
+    "independent_clean_machine_rebuild": "unverified",
+    "research_sequence_deliverable": false,
+    "specialized_branch_development": "outside_phase8",
+    "teammate_reader_gate": false
+  },
+  "manifest_files": 754,
+  "manifest_sha256": "02b978e6ad1fdf38249d94695bd8c57fa98fe7e05fb5a7a7ea825797c2fd2c06",
+  "native_execution_phase": 7,
+  "native_inheritance": {
+    "execution_phase": 7,
+    "native_binary_sha256": "7a63d086e3d4dcadcddcad8cde4e66bfac15d0af07678a6dd6e8de62a01289df",
+    "native_suite_reexecuted": false,
+    "new_native_35_execution": false,
+    "physical_asset_sha256": "9405cfab1fb00e36290b242579d8ce4f085f6fa4505228aee72f723770a0de38"
+  },
+  "new_native_35_execution": false,
+  "passed": true,
+  "phase": 8,
+  "physics_asset_sha256": "9405cfab1fb00e36290b242579d8ce4f085f6fa4505228aee72f723770a0de38",
+  "physics_exe_sha256": "7a63d086e3d4dcadcddcad8cde4e66bfac15d0af07678a6dd6e8de62a01289df",
+  "predecessor_archive": {
+    "bytes": 4390390481,
+    "path": "E:\\Medical Image Visualization and Analysis\\output\\Phase7\\EndoForge-Phase7-Windows-20261026-r1.zip",
+    "sha256": "6a998be9dcd04dbfe4707d5abf0bc8e14991b359a6e7bfa04dedeabcc70e0e60"
+  },
+  "preserved_files": 5984,
+  "schema": "endoforge.phase8.public-summary.v1",
+  "scope": "Shared Phase8 engineering foundation and tested finite paths, bound to this exact ZIP and fresh extracted run. Accepted Phase7 native qualification is inherited, never described as current35 execution. Clinical calibration/review remains pending. Four alignment frames are internal regressions; no specialized research sequences, downstream-reader acceptance, suturing or universal collision guarantee.",
+  "source_model": "Assets/Phase8/EndoForge_Anatomy.blend"
+}

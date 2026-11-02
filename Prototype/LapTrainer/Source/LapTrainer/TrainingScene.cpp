@@ -1,4 +1,5 @@
 #include "TrainingScene.h"
+#include "Phase7SurfaceUV.h"
 #include "SimulationBridge.h"
 #include "Camera/CameraComponent.h"
 #include "Components/DirectionalLightComponent.h"
@@ -67,10 +68,20 @@ ATrainingScene::ATrainingScene()
     TissueMesh->SetCastShadow(true);
 }
 
+FString ATrainingScene::CommonMaterialPath(const FString& Stem) const
+{
+    const int32 Phase=bPhase9?9:bPhase8?8:7;
+    const FString Name=FString::Printf(TEXT("%sPhase%d"),*Stem,Phase);
+    return FString::Printf(TEXT("/Game/Phase%d/Materials/%s.%s"),Phase,*Name,*Name);
+}
+
 void ATrainingScene::BeginPlay()
 {
     Super::BeginPlay();
-    bPhase6=FParse::Param(FCommandLine::Get(),TEXT("LapPhase6")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
+    bPhase9=FParse::Param(FCommandLine::Get(),TEXT("LapPhase9")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase9Test"));
+    bPhase8=bPhase9 || FParse::Param(FCommandLine::Get(),TEXT("LapPhase8")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase8Test"));
+    bPhase7=bPhase8 || FParse::Param(FCommandLine::Get(),TEXT("LapPhase7")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase7Test"));
+    bPhase6=bPhase7 || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
     bPhase5=bPhase6 || FParse::Param(FCommandLine::Get(),TEXT("LapPhase5")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase5Test"));
     if(bPhase6) SceneRoot->SetMobility(EComponentMobility::Static);
     bVisualPreview=FParse::Param(FCommandLine::Get(),TEXT("LapVisualPreview"));
@@ -87,6 +98,12 @@ void ATrainingScene::BeginPlay()
     if(!InsulationMaterial) InsulationMaterial=DarkMaterial;
     if(!TrayMaterial) TrayMaterial=MetalMaterial;
     if(!PadBackingMaterial) PadBackingMaterial=TableMaterial;
+    if(bPhase7)
+    {
+        MetalMaterial=LoadObject<UMaterialInterface>(nullptr,*CommonMaterialPath(TEXT("M_Metal")));
+        InsulationMaterial=LoadObject<UMaterialInterface>(nullptr,*CommonMaterialPath(TEXT("M_Insulation")));
+        if(!MetalMaterial || !InsulationMaterial)AnatomyError=FString::Printf(TEXT("Phase%d instrument materials missing; run the Phase%d-only asset importer"),GetMilestone(),GetMilestone());
+    }
     TissueMesh->SetMaterial(0,TissueMaterial);
     if(bPhase5) {Camera->bOverrideAspectRatioAxisConstraint=true;Camera->SetAspectRatioAxisConstraint(AspectRatio_MaintainXFOV);CreatePhase5Environment();} else CreateEnvironment();
     CreateInstrument(); UpdateCamera();
@@ -104,12 +121,14 @@ void ATrainingScene::BeginPlay()
     InitializePhase4();
     if(bPhase5) InitializePhase5();
     if(bPhase6) InitializePhase6();
+    if(bPhase7) {ConfigurePhase7Rendering();WritePhase5Manifest();}
     if(APlayerController* PC=UGameplayStatics::GetPlayerController(this,0))
     { PC->SetViewTarget(this); PC->bShowMouseCursor=false; PC->SetInputMode(FInputModeGameOnly()); }
 }
 void ATrainingScene::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     RestorePhase6StartupRendering();
+    if(bPhase7)StopPhase7Video(TEXT("end_play"));
     FlushPresentedStates();
     if(bPhase6 && !bPhase5Finished) WritePhase6Runtime();
     if (Bridge) Bridge->ShutdownBridge();
@@ -534,14 +553,24 @@ void ATrainingScene::UpdateTissueSurface()
             const auto D=AnatomyAsset->GetObjectField(TEXT("dynamic_surface")); const auto& UV=D->GetArrayField(TEXT("uvs"));
             const auto& Ids=Bridge->GetMaterialIds();
             auto U=[&](int I){int M=Ids.IsValidIndex(I)?Ids[I]:I;M%=UV.Num(); const auto& A=UV[M]->AsArray();return FVector2D(A[0]->AsNumber(),1-A[1]->AsNumber());};
-            if(UV.Num()>0) for(int I=0;I<TissueRenderBindings.Num();++I) {const auto& S=TissueRenderBindings[I];TissueRenderData.UV[I]=U(S.A)*S.Weight.X+U(S.B)*S.Weight.Y+U(S.C)*S.Weight.Z;}
+            if(UV.Num()>0) for(int I=0;I<TissueRenderBindings.Num();++I)
+            {
+                const auto& S=TissueRenderBindings[I];
+                TissueRenderData.UV[I]=bPhase7?Phase7SurfaceUV::Interpolate(U(S.A),U(S.B),U(S.C),S.Weight):
+                    U(S.A)*S.Weight.X+U(S.B)*S.Weight.Y+U(S.C)*S.Weight.Z;
+            }
         }
         // The native tetrahedral layer supplies its complete physical boundary, including
         // lower faces and new cut walls. No invented caps or duplicate reverse faces are added.
     }
     // Linear barycentric binding: exact physical triangles, no cross-cut interpolation or offset.
-    TrainingGeometry::UpdateBoundSurface(TissueVertices,TissueNormals,TissueRenderBindings,TissueRenderData,0.0);
-    if(bPhase6) UpdatePhase6DisplaySurface();
+    if(!bPhase9)TrainingGeometry::UpdateBoundSurface(TissueVertices,TissueNormals,TissueRenderBindings,TissueRenderData,0.0);
+    if(bPhase9) UpdatePhase9DisplaySurface(Rebuild);
+    else
+    {
+        if(bPhase6) UpdatePhase6DisplaySurface();
+        if(bPhase7) UpdatePhase7ShadingNormals();
+    }
     if(bPhase5) UpdatePhase5Tangents(TissueRenderData);
     if (bPhase3Test || bPhase4Test || bPhase5Test)
         for(int32 I=0;I<TissueRenderBindings.Num();++I)
@@ -572,6 +601,14 @@ void ATrainingScene::UpdateSimulation(float DeltaSeconds)
     TArray<FLapToolCommand> Commands;
     for(int32 T=0;T<2;++T) { FLapToolCommand C; C.TipCm=ToolTips[T]; C.bClosed=ToolClosed[T]; C.RollDeg=ToolRolls[T]; if(bPhase6) ConfigurePhase6Command(T,C); Commands.Add(C); }
     Bridge->TickDualBridge(DeltaSeconds,Commands,ActiveTool,bResetRequested); bResetRequested=false;
+    UpdatePhase7Progression();
+    if(bPhase7&&!Phase6Interaction.Tools[ActiveTool].bPositionTarget)
+    {
+        // This is the actual transport-admitted command, not a cosmetic clamp.
+        // ManualIntentTipCm separately retains the bounded user gesture.
+        const auto& Queued=Bridge->GetLastQueuedCommands();
+        if(Queued.IsValidIndex(ActiveTool)){ToolTips[ActiveTool]=Queued[ActiveTool].TipCm;ToolTip=ToolTips[ActiveTool];}
+    }
     const uint64 SafetyStops=Bridge->GetSafetyStopCount();
     if(SafetyStops>LastSafetyStopCount)
     {
@@ -652,7 +689,7 @@ void ATrainingScene::Tick(float DeltaSeconds)
         else if(DeltaSeconds>.00001f && (bPhase6 || DeltaSeconds<1))
         {
             Phase5FrameTimes.Add(DeltaSeconds);
-            if(!bPhase6 || (Mode!=TEXT("replaying") && Mode!=TEXT("replay_complete")))
+            if(!bPhase7 && (!bPhase6 || (Mode!=TEXT("replaying") && Mode!=TEXT("replay_complete"))))
             {Phase5MeasuredWall+=DeltaSeconds;Phase5MeasuredNative+=FMath::Max(0.0,Bridge->GetNativeTime()-Phase5PreviousNative);}
             if(bPhase6){const uint32 Cycles=RHIGetGPUFrameCycles();if(Cycles)Phase6GpuTimes.Add(FPlatformTime::ToMilliseconds(Cycles));}
         }

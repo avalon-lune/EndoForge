@@ -2,11 +2,11 @@
 
 The immediate research direction is controllable endoscopic image sequences with corresponding geometry and deformation state. Physical interaction supports that goal; a complete surgical training curriculum and clinically calibrated force prediction are separate longer-term objectives. The order below reflects that direction and is not a delivery-date commitment.
 
-Author and maintainer: **Avalon**. As of 24 October 2026, the local **Phase 6 r2 engineering delivery has passed**; [STATUS](STATUS.md) distinguishes that result from unfinished appearance, calibration and specialized datasets. [MILESTONES](MILESTONES.md) gives the stage-by-stage implementation history.
+Author and maintainer: **Avalon**. As of 2 November 2026, **Phase9 has completed local engineering verification and packaging and is ready for human visual/interaction review**. [Exact results](verification/phase9-summary.json) and [STATUS](STATUS.md) retain the scope and limitations. Phase9 has fresh native qualification for its changed mesh. Four internal alignment frames are regressions; specialized branch development remains separate. [MILESTONES](MILESTONES.md) preserves all nine stages.
 
 ## Phase 4 — deformation, curved specimens, replay and traceability
 
-The current source extends the verified Phase 3 interaction to configurable flat and curved thin specimens, simulation-step action recordings, guarded replay, and physical/render/camera state capture. Suturing is deferred.
+The Phase4 source extended verified Phase3 interaction to configurable flat/curved thin specimens, simulation-step recordings, guarded replay, and physical/render/camera state capture. Suturing remained deferred.
 
 The [Phase 4 specification](PHASE4.md) defines the acceptance gates: meaningful stable manipulation, 600 simulated seconds of continuous prescribed actions for each shape, five repeated sequences with no more than 0.5 mm node RMS deviation, contact/health records, independent snapshot geometry/projection checks, exact-binary packaged and relocated testing, and preservation of all earlier delivery files.
 
@@ -14,7 +14,7 @@ Passing those gates establishes a reusable engineering deformation foundation. I
 
 ## Preserved foundation — Phase 4 collision correction
 
-Before anatomy work, revisit the curved straight-retreat defect and expand angle, speed and trajectory coverage with raw surface geometry checks. The [collision-fix specification](PHASE4-COLLISION-FIX.md) adds these gates while retaining every existing Phase 4 acceptance requirement. The corrected distribution is separate; all Phase 1–4 deliveries remain preserved. A successful finite matrix establishes only its measured operating range.
+The preserved Phase4 collision correction revisited the curved straight-retreat defect and expanded angle/speed/trajectory coverage with raw surface geometry checks. The [collision-fix specification](PHASE4-COLLISION-FIX.md) retained the Phase4 requirements. The earlier distributions remain preserved; the finite matrix establishes only its measured operating range.
 
 ## Phase 5 — localized gallbladder and cavity scene
 
@@ -26,7 +26,7 @@ The [Phase 5 implementation](PHASE5.md) adds original editable Blender anatomy, 
 
 ## Phase 6 — shared interaction, rendering and output foundation
 
-The current delivery improves manual response/target bounds, observation space,
+The preserved Phase 6 delivery improves manual response/target bounds, observation space,
 bound display geometry and original materials. Actual Lumen GI/reflections,
 hardware ray tracing and near-contact shadows are verified with controlled
 captures. Sustained grip, adaptive contact solving, static-liver jaw admission,
@@ -40,13 +40,40 @@ physical/display relationship and repeat affected tests after changes. This is
 the shared platform before project-specific development; the current gallbladder
 scene does not substitute for an intestinal/colonoscopy scene.
 
-## Next — specialized scenes and paired dataset workflows
+## Phase 7 — shared anatomy and appearance revision
+
+The [accepted common-foundation revision](PHASE7.md) smooths and requalifies the physical/display liver, refines original materials and display UVs, retains bounded attachment geometry, and verifies actual packaged image/state correspondence. [Recorded results](verification/phase7-summary.json) bind the Phase7 runtime, assets and fresh-extracted checks. Both the former frame-pacing/progression shortfall and the transient SOFA thread-field recording mismatch are covered by the accepted execution configuration and strict replay tests.
+
+The images remain synthetic. Supervisor review should guide further vascular/translucent detail, anatomical proportions, instrument appearance and camera response. Additional realism must preserve geometry/physics/data correspondence and rerun affected checks. Project 1 and Project 2 specialized scenes and outputs have not started in this milestone.
+
+## Phase 8 — common foundation before branching
+
+The current [Phase8 contract](PHASE8.md) adds reference-guided original appearance and neck-landmark refinement while keeping accepted physical identity, controls, replay and geometric outputs consistent. It removes research-sequence delivery and teammate-reader integration from this common milestone. Four internal paired states remain regression checks only. [The branch boundary](PHASE8-BRANCH-BOUNDARY.md) separates the two projects and the later surgical-camera appearance profile. Acceptance requires the exact local delivery receipt, not this roadmap.
+
+## Phase 9 — revised organ surface and physical output
+
+The [Phase9 revision](PHASE9.md) addresses the conspicuous gallbladder contour
+corners with a revised physical wall and bound display, regional appearance and
+support-weighted attachment. Actual node velocities and signed jaw contact
+reactions have explicit definitions. Fresh native, independent geometry,
+packaged and extracted-package checks passed. Grey near views still contain
+shallow curvature bands; human visual approval is the current stopping point.
+
+Review organ proportions, residual faceting, plastic appearance and deformation
+under single/bilateral traction. Record remaining defects by view and action,
+then rerun the affected engineering checks after changes. The common baseline
+has not become a calibrated biological model merely because these checks pass.
+
+## After shared-base review — specialized scenes and paired dataset workflows
+
+[Current branch responsibilities](BRANCH-BOUNDARY.md) supersede the Phase8-era
+physical counts while retaining the separation between the two research aims.
 
 Basic stereo RGB, camera parameters, depth, geometric normals, object IDs, masks and physical state already exist. Agree on each project's additional output fields, scene, variation and ingestion requirements before extending the exporter. Candidate additions include temporal tissue trajectories, richer visibility and task-specific image decomposition. Their inclusion follows the downstream research contract, not a blanket promise to export everything. The tutor's original reference documents remain local and are not republished here.
 
 Each image must identify the physical state and camera that produced it. A video and an independently sampled physics CSV are not automatically synchronized ground truth. Handle resets, duplicated render frames, cut-induced identity changes and occlusion explicitly. Export provenance, parameters, actions and timebase so samples can be regenerated and checked.
 
-Acceptance includes ingestion by the intended research code, numerical/image correspondence checks and a small reviewed dataset before large-scale generation. Scene, action, material and appearance variations should then be expanded according to measured coverage needs.
+Each later research branch may include ingestion by its intended research code in its own acceptance, numerical/image correspondence checks and a small reviewed dataset before large-scale generation. Scene, action, material and appearance variations should then be expanded according to measured coverage needs.
 
 ## Preserved earlier milestones
 

@@ -1,0 +1,267 @@
+{
+  "schema": "endoforge.phase7.native-blend-verification.v1",
+  "passed": true,
+  "native_reopen": true,
+  "blender_version": "5.2.2 LTS",
+  "checks": {
+    "Gallbladder_HighPrecision_Display_editable_exact_geometry": true,
+    "Liver_HighPrecision_Capsule_editable_exact_geometry": true,
+    "LocalPeritonealCavity_editable_exact_geometry": true,
+    "InferiorCavitySurface_editable_exact_geometry": true,
+    "LobulatedOmentalSkirt_editable_exact_geometry": true,
+    "AnteriorOmentalFold_editable_exact_geometry": true,
+    "CysticDuctLandmark_editable_exact_geometry": true,
+    "CysticArteryLandmark_editable_exact_geometry": true,
+    "attachment_vertex_group": true,
+    "bed_locked_display_group": true,
+    "relative_texture_links": true,
+    "declared_texture_resolution": true,
+    "phase6_gallbladder_core_and_anchor_positions_preserved": true,
+    "new_liver_revision_declared": true
+  },
+  "editable_objects": 12,
+  "blend_sha256": "781a437059cb0feb00fbccbbb72b94b53ab7199b72cd4357773acfafd8106bdf",
+  "scene_sha256": "45302a52a47ed233ab2359775437aca1984d6a478e12c63cfde3176c77a69dca",
+  "texture_links_loaded": 21,
+  "texture_paths": [
+    {
+      "file": "textures/ArterialLandmark_base.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "4cca19fe51f3252d12db51c6ef3df3af44df59e2528f6876beaea40eaaf47c9d"
+    },
+    {
+      "file": "textures/ArterialLandmark_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "5ea91ba2f20a04db844dba69a492ed371c87527a0d90a32b01c73edad0fe3848"
+    },
+    {
+      "file": "textures/ArterialLandmark_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "e797a358b45dede24705d34d9013c665bc60ea1f0dd46e715ea851bf909ce9ca"
+    },
+    {
+      "file": "textures/BiliaryDuct_base.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "36235ac2455b3eb8298dfbfa0904048e427801f38d56e5dccf1176679a252d10"
+    },
+    {
+      "file": "textures/BiliaryDuct_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "783ccfe8505964af737c8094bd301dd52b3ad5f1bd9bc284a98d76106eed5d84"
+    },
+    {
+      "file": "textures/BiliaryDuct_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "fa79f494479fd288c700a2d3ce6fba27902554efc9a634cdbfe71c85c3e97d0d"
+    },
+    {
+      "file": "textures/GallbladderSerosa_base.png",
+      "resolution": [
+        4096,
+        4096
+      ],
+      "sha256": "a5f07176a74f655c3eca5cc3d21871c5232b6d93f1753589bc8f24e45662f1fc"
+    },
+    {
+      "file": "textures/GallbladderSerosa_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "966aaefc3bfdc48ac8b25722a51c9daaf58b58845407fe079f33b205c2b2e9e6"
+    },
+    {
+      "file": "textures/GallbladderSerosa_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "da33bfac1a406d7e0d9e6b2ea11e13e6c0ff1df0c9d01d7213d38f5fb9faa5bf"
+    },
+    {
+      "file": "textures/HepaticBedConnective_base.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "7c6bf1d46e5042673a0abfb70b7432e597848fd427c3f52737eb21e4243770d4"
+    },
+    {
+      "file": "textures/HepaticBedConnective_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "7621c0f77eea45b84eb3a523e20ccdf415a3f7aedeead0b4ea7fbaa24c206feb"
+    },
+    {
+      "file": "textures/HepaticBedConnective_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "b3d36fd9df1b82627eb589031a453464a66e7269643a04be90f1c741a06860a2"
+    },
+    {
+      "file": "textures/HepaticCapsule_base.png",
+      "resolution": [
+        4096,
+        4096
+      ],
+      "sha256": "e5e8a0dcbe2f45d2769ca1b7118d9ac14787efc9327324e00503aaf8aec20148"
+    },
+    {
+      "file": "textures/HepaticCapsule_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "925d7bf7f680ab93763db663ebe2dd6a667a5e1da7f338fa8b584e9d83a29c4d"
+    },
+    {
+      "file": "textures/HepaticCapsule_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "6da7ad5f93ce8708aa637e92ec934ff2ee270403c2f4bd46e4d9641384f9732d"
+    },
+    {
+      "file": "textures/OmentalFat_base.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "81cdf914f1d799f207549b8371304376ceee98791899d13328a39fe1bed181bf"
+    },
+    {
+      "file": "textures/OmentalFat_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "8e4b888f344935828ac7ee97a428a3537396fb5c00d9b39e39b35ed2eb5b2d47"
+    },
+    {
+      "file": "textures/OmentalFat_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "6a65f3869b9a6abe072288f975af60531e21216e58c5890d7b5f24be597fd831"
+    },
+    {
+      "file": "textures/PeritonealLining_base.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "677f4ce1abfc566792b5779d123f80f4254535af301bfaf90a88b38bbefdf1af"
+    },
+    {
+      "file": "textures/PeritonealLining_normal.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "c8003c8c62fe2326ca0d5c4d11960bbcfd9fb4d197ad6d5b6163b5ea006d720f"
+    },
+    {
+      "file": "textures/PeritonealLining_roughness.png",
+      "resolution": [
+        2048,
+        2048
+      ],
+      "sha256": "52a59b886b299e277d291cd189d6fa9423d9d4646b28b8f8ca5e9b1fa635df9e"
+    }
+  ],
+  "shapes": [
+    {
+      "name": "Gallbladder_HighPrecision_Display",
+      "vertices": 23760,
+      "triangles": 33792,
+      "max_vertex_error_m": 2.0785073065006868e-09,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "Liver_HighPrecision_Capsule",
+      "vertices": 89160,
+      "triangles": 59440,
+      "max_vertex_error_m": 7.474595561686398e-09,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "LocalPeritonealCavity",
+      "vertices": 18721,
+      "triangles": 36864,
+      "max_vertex_error_m": 1.049946732042024e-08,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "InferiorCavitySurface",
+      "vertices": 18193,
+      "triangles": 35840,
+      "max_vertex_error_m": 9.661243723144111e-09,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "LobulatedOmentalSkirt",
+      "vertices": 42657,
+      "triangles": 84480,
+      "max_vertex_error_m": 1.0362914236455622e-08,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "AnteriorOmentalFold",
+      "vertices": 13065,
+      "triangles": 25600,
+      "max_vertex_error_m": 7.9183476913819e-09,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "CysticDuctLandmark",
+      "vertices": 1514,
+      "triangles": 3024,
+      "max_vertex_error_m": 2.220153207330605e-09,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    },
+    {
+      "name": "CysticArteryLandmark",
+      "vertices": 1514,
+      "triangles": 3024,
+      "max_vertex_error_m": 2.1891813605111355e-09,
+      "no_preview_only_modifier": true,
+      "custom_normals": true
+    }
+  ],
+  "no_preview_only_subdivision": true,
+  "custom_smooth_normals_preserved": true,
+  "units": "m",
+  "physical_scale": 1.0,
+  "clinical_review": "pending"
+}

@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Phase7CommandBudget.h"
+#include "Phase7ProgressionClock.h"
 #include "SimulationBridge.generated.h"
 
 class FSocket;
@@ -71,6 +73,7 @@ public:
     uint64 GetReplayLength() const { return ReplayLength; }
     uint64 GetRecordedSteps() const { return RecordedSteps; }
     double GetNativeTime() const { return NativeTime; }
+    const EndoForgePhase7::FProgressionObservation& GetPhase7ProgressionObservation() const { return Phase7ProgressionObservation; }
     int32 GetAcknowledgedResetId() const { return AcknowledgedResetId; }
     const TSharedPtr<FJsonObject>& GetAcceptedState() const { return AcceptedState; }
     const TArray<int32>& GetNodeIds() const { return NodeIds; }
@@ -85,6 +88,7 @@ public:
     uint64 GetFrozenResumeFenceSequence() const { return FrozenResumeFenceSequence; }
     uint64 GetAppliedCommandSequence() const { return AppliedCommandSequence; }
     uint64 GetQueuedCommandSequence() const { return CommandSequence; }
+    const TArray<FLapToolCommand>& GetLastQueuedCommands() const { return LastCommands; }
     const FLapToolState* GetToolState(int32 Index) const { return HasToolState() && ToolStates.IsValidIndex(Index) ? &ToolStates[Index] : nullptr; }
     uint64 GetTopologyRevision() const { return TopologyRevision; }
     uint64 GetSafetyStopCount() const { return SafetyStopCount; }
@@ -122,6 +126,11 @@ private:
     friend class FPhase4BridgeProtocolTest;
     int32 ExpectedProtocol = 4;
     bool bPhase6Commands = false;
+    bool bPhase7Commands = false;
+    EndoForgePhase7::FProgressionObservation Phase7ProgressionObservation;
+    Phase7CommandBudget::FState Phase7ManualBudgets[2];
+    uint64 Phase7BudgetSimulation=MAX_uint64;
+    int32 Phase7BudgetActive=-1,Phase7BudgetReset=-1;
     FString RequestedSpecimen = TEXT("flat"), Specimen = TEXT("flat");
     FString SessionMode = TEXT("idle"), SessionError, PendingSessionAction;
     uint64 PendingActionId = 0, AcknowledgedActionId = 0;

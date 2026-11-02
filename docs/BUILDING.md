@@ -1,4 +1,75 @@
-# Building EndoForge — Phase 6 and preserved earlier phases
+# Building EndoForge — current Phase 9
+
+The current scene uses UE `-LapPhase9`, the compatible native `--phase6` solver,
+explicit `Assets/Phase9` inputs and development port 47391. `LapTrainer` remains
+the internal UE project name. UE 5.7.4, the C++ toolchain and native dependencies
+are installed separately; the prerequisite inventory below records the pinned
+baseline. The original Phase5–9 authoring assets and dependency scripts are in
+this repository. Reauthoring the Blender scene is optional when opening the
+checked-in UE assets.
+
+The [Phase9 source/asset inventory](verification/phase9-source-assets.json) binds
+533 exact inputs to the tested local build. Hydrate LFS before comparing hashes.
+Publication documentation and historical recipe copies are outside that build
+inventory. A clean-machine rebuild has not been independently verified; a new
+build does not automatically inherit the recorded local acceptance.
+
+## Build and launch Phase 9
+
+From the repository root, with the prerequisites installed:
+
+```powershell
+$EngineRoot = 'E:/UE_5.7' # Replace with your UE 5.7.4 installation.
+git lfs install
+git lfs pull
+& .\Physics\download-dependencies.ps1
+& .\Physics\build.ps1
+& .\Prototype\LapTrainer\Scripts\Build.ps1 -EngineRoot $EngineRoot -Target Editor
+# Terminal A: keep physics running.
+& .\Scripts\StartPhase9Development.ps1 -Mode Physics
+# Terminal B: full editor, then normal Play.
+& .\Scripts\StartPhase9Development.ps1 -Mode Editor -EngineRoot $EngineRoot
+```
+
+The two launch commands belong in separate terminals. See [START-HERE](START-HERE.md)
+for controls, matching ports and shutdown. Native mesh/report paths should be
+absolute because the native executable changes its working directory.
+
+The original model is `Assets/Phase9/EndoForge_Anatomy.blend`; generators are under
+`Scripts/BlenderPhase9` and read retained earlier asset definitions. Do not
+regenerate or reimport merely to open the hydrated project. If authoring changes,
+follow [the authoring/import instructions](../Scripts/README-Phase9.md), which
+describe the explicit importer and its independent preservation checks.
+
+## Phase 9 validation and delivery scope
+
+The current [acceptance specification](../Scripts/Phase9/acceptance-spec.json)
+retains separate native, geometry, rendering, data, build and delivery gates.
+Examples after building, using fresh run names:
+
+```powershell
+python -B .\Scripts\Phase9\run_native_qualification.py --mesh Assets/Phase9/physics-mesh.json --runtime Physics/runtime --output tmp/phase9/native-YOUR-RUN
+& .\Prototype\LapTrainer\Scripts\TestPhase9Editor.ps1 -EngineRoot $EngineRoot -RunName 'Phase9Editor-YOUR-RUN'
+```
+
+The native wrapper executes 35 cases; the independent all-state long-hold audit,
+reference/matrix/nominal/endurance geometry, actual captured data audits and
+packaged/extracted verification are additional work. Successful execution of
+either example alone is not complete acceptance. `Scripts/Phase9` supplies the
+reusable qualification/audit/build-receipt/assembly helpers. Exact historical
+[delivery recipes](verification/phase9-tools/README.md) document the completed
+workstation execution and depend on omitted local evidence; they are not generic
+one-command acceptance scripts.
+
+`write_build_receipt.py` prepares and seals actual build provenance;
+`assemble_review_candidate.py` requires explicit current qualification and a
+successful build receipt; `Scripts/TestPhase9Package.ps1` exercises an explicitly
+selected candidate or extraction. Consult their `--help`/parameters before use.
+All acceptance requires actual new reports bound to the chosen build and model.
+The [published Phase9 result](verification/phase9-summary.json) records the
+completed local engineering review candidate, with human visual approval pending.
+
+## Preserved Phase 6 build instructions
 
 The current Phase 6 scene selects protocol 5 with UE `-LapPhase6`, native `--phase6`, assets under `Assets/Phase6` and matching port 47329. The native default remains protocol 4 for technical specimens. `LapTrainer` remains the internal UE project name. Dependencies, generated runtimes and deliveries are excluded from Git. The sections below preserve earlier workflows under explicit historical headings.
 

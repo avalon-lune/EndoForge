@@ -1,0 +1,28 @@
+{
+  "phase": 9,
+  "unmodified_actual_ue_captures": true,
+  "images": [
+    {
+      "source": "tmp/phase9/package-tests/Phase9FreshExtract-final01/phase6-workspace.png",
+      "copy": "workspace.png",
+      "sha256": "8918da81008da4f966d907ab71ecf11a0a3b7f16c8df8a8119f01e1297385255"
+    },
+    {
+      "source": "tmp/phase9/package-tests/Phase9FreshExtract-final01/phase6-dual-traction.png",
+      "copy": "dual-traction.png",
+      "sha256": "274db82f862ae7f57400e57e353405ea55927e477db08ab480d43c9fb8a2073d"
+    },
+    {
+      "source": "tmp/phase9/package-tests/Phase9FreshExtract-final01/phase6-jaw-contact.png",
+      "copy": "jaw-contact.png",
+      "sha256": "1bc2ae2a65a787236041446d1279d019b94053bff24c0e46d9c8f1ccf20965c6"
+    },
+    {
+      "source": "tmp/phase9/package-tests/Phase9FreshExtract-final01/phase6-organ-closeup.png",
+      "copy": "organ-closeup.png",
+      "sha256": "f536d014be498365cbd5c0b0c3089533f10ef00c79f062cbca26ca0455e3a4bb"
+    }
+  ],
+  "source_path_base": "repository root; original capture files remain local",
+  "copy_path_base": "this provenance file directory"
+}

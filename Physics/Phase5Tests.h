@@ -11,6 +11,11 @@ int testPhase5(Phase4Session&session,const std::filesystem::path&out,const json&
         {"jaw_half_extents_m",{JawL*.5,JawW*.5,JawT*.5}},{"static_liver",a.source.at("static_liver")}}).dump()<<'\n';
     json report={{"phase",t.phase6Input?6:5},{"case_id",out.stem().string()},{"checks",json::object()},{"stages",json::array()},
                  {"options",options},{"config",t.config.data()},{"trace",tracePath.generic_string()}};
+    const bool phase9=t.config.phase9Outputs();
+    const auto outputAuditPath=out.parent_path()/(out.stem().string()+"-phase9-output-audit.jsonl");std::ofstream outputAudit;
+    bool outputAuditsPassed=true,outputContactReferenceExercised=false,outputInitialInvalidSample=false,outputValidNoContactSample=false;
+    size_t outputAuditSamples=0,outputAuditFailures=0,outputInitialInvalidSamples=0,outputValidNoContactSamples=0,outputNonzeroContactSamples=0;json firstOutputAuditFailure=nullptr;
+    if(phase9){report["milestone"]=9;outputAudit.open(outputAuditPath,std::ios::binary);if(!outputAudit)throw std::runtime_error("Cannot open Phase9 native output audit trace");}
     double peakDepth=0,peakDisp=0,peakBed=0,peakFixed=0,minVol=1,minArea=1,minLumen=1,maxLumen=1,peakJump=0;
     bool healthy=true,finite=true,envelopeValid=true;double minLiverAlarm=1,maxLiverAlarm=0;int sample=0,cycle=0;std::vector<double>costs;std::vector<V>previous;
     const int cycles=options.value("cycles",1);const bool replay=options.value("replay",false),dual=options.value("dual",false);
@@ -23,10 +28,26 @@ int testPhase5(Phase4Session&session,const std::filesystem::path&out,const json&
     if(cycles<1||cycles>100||speed<.002||speed>.018||lift<=0||lift>.01||holdSteps<0||holdSteps>18000||tractionHoldSteps<0||tractionHoldSteps>18000||singleTool<0||singleTool>1||minimumIncrement<0||minimumIncrement>lift)throw std::invalid_argument("Invalid Phase5 test options");
     std::vector<std::vector<V>>reference;std::vector<json>events;
     if(replay)session.beginRecord(1);
+    auto auditOutput=[&](const json&state,const std::string&stage,int traceSample,bool acceptedTick,int replayIteration=0){
+        if(!phase9)return;
+        auto audit=phase9AuditPhysicsOutput(session,state);audit["case_id"]=out.stem().string();audit["milestone"]=9;audit["stage"]=stage;audit["sample"]=traceSample;audit["cycle"]=cycle;audit["accepted_tick"]=acceptedTick;audit["replay_iteration"]=replayIteration;
+        ++outputAuditSamples;const bool passed=audit.at("passed").get<bool>();outputAuditsPassed&=passed;if(!passed){++outputAuditFailures;if(firstOutputAuditFailure.is_null())firstOutputAuditFailure=audit;}
+        const bool exercised=audit.at("metrics").value("contact_reaction_reference_exercised",false);outputContactReferenceExercised|=exercised;if(exercised)++outputNonzeroContactSamples;
+        if(passed){
+            bool allSamplesInvalid=true,allSamplesValid=true,noContactRows=true;
+            for(const auto&tool:state.at("tools")){const bool valid=tool.at("contact_force_sample_valid").get<bool>();allSamplesInvalid&=!valid;allSamplesValid&=valid;}
+            for(const auto&tool:audit.at("metrics").at("tools"))noContactRows&=tool.value("contact_reference_status","")=="no_contact_constraint_rows";
+            if(t.time==0&&allSamplesInvalid){outputInitialInvalidSample=true;++outputInitialInvalidSamples;}
+            if(acceptedTick&&allSamplesValid&&noContactRows&&audit.at("metrics").at("tools").size()==2){outputValidNoContactSample=true;++outputValidNoContactSamples;}
+        }
+        outputAudit<<audit.dump()<<'\n';if(!outputAudit)throw std::runtime_error("Phase9 native output audit trace write failed");
+    };
+    if(phase9)auditOutput(session.state(),"initial",-1,false);
     auto tick=[&](const std::string&stage){
         if(!healthy)return;
-        session.step();auto state=session.state();state["case_id"]=out.stem().string();state["stage"]=stage;state["sample"]=sample++;state["cycle"]=cycle;
+        const double previousTime=t.time;session.step();auto state=session.state();state["case_id"]=out.stem().string();state["stage"]=stage;state["sample"]=sample++;state["cycle"]=cycle;
         state["commanded_tips_m"]={jvec(t.tools[0].commanded),jvec(t.tools[1].commanded)};trace<<state.dump()<<'\n';
+        if(phase9)auditOutput(state,stage,sample-1,t.time>previousTime+Dt*.5);
         costs.push_back(t.stepMs);peakDisp=std::max(peakDisp,t.maxDisp);healthy&=t.healthy&&t.safetyStops==0;
         for(auto&tool:t.tools){peakDepth=std::max(peakDepth,tool.penetration);finite&=std::isfinite(tool.force)&&std::isfinite(tool.penetration);}
         peakBed=std::max(peakBed,state["attachment_max_extension_m"].get<double>());minVol=std::min(minVol,t.minVolume);minArea=std::min(minArea,t.minArea);
@@ -39,6 +60,7 @@ int testPhase5(Phase4Session&session,const std::filesystem::path&out,const json&
         if(replay){reference.push_back(previous);events.push_back({t.tools[0].grasping,t.tools[1].grasping,session.nodeIds,t.components,t.cutCount});}
     };
     auto stage=[&](const std::string&name){auto st=session.state();for(auto key:{"vertices","triangles","node_ids","parent_node_ids","material_node_ids"})st.erase(key);st["stage"]=name;st["cycle"]=cycle;
+        if(phase9){bool same=json::parse(session.snapshotText())==session.snapshot();const auto key="phase9_recording_serialization_preserves_complete_snapshot";if(report["checks"].contains(key))same&=report["checks"][key].get<bool>();report["checks"][key]=same;}
         if(t.fastElasticity&&options.value("assembly_compare",false)){auto[absolute,relative]=t.fastElasticity->compareWithSofaReference();st["assembly_reference_max_absolute_n_m"]=absolute;st["assembly_reference_max_relative"]=relative;bool ok=relative<1e-12;if(report["checks"].contains("assembly_matches_sofa_at_every_stage"))ok&=report["checks"]["assembly_matches_sofa_at_every_stage"].get<bool>();report["checks"]["assembly_matches_sofa_at_every_stage"]=ok;}
         report["stages"].push_back(st);std::cout<<"Phase5 "<<cycle<<" "<<name<<" grip="<<t.tools[0].grasping<<","<<t.tools[1].grasping<<" force="<<t.tools[0].force<<","<<t.tools[1].force<<" disp="<<t.maxDisp<<" healthy="<<healthy<<std::endl;};
     auto run=[&](int count,const std::string&name){for(int n=0;n<count&&healthy;n++)tick(name);stage(name);};
@@ -111,7 +133,8 @@ int testPhase5(Phase4Session&session,const std::filesystem::path&out,const json&
         session.finishRecord();const auto saved=session.lastSteps;report["replays"]=json::array();
         for(int repeat=1;repeat<=5;repeat++){
             session.resetTo(session.lastConfig,repeat+1);session.mode="replaying";double maxRms=0;bool same=true;
-            for(size_t f=0;f<reference.size();f++){session.step();const auto&x=t.dofs->x.getValue();double sum=0;for(size_t n=0;n<x.size();n++){double d=length(x[n]-reference[f][n]);sum+=d*d;}maxRms=std::max(maxRms,std::sqrt(sum/x.size()));same&=json({t.tools[0].grasping,t.tools[1].grasping,session.nodeIds,t.components,t.cutCount})==events[f];}
+            if(phase9)auditOutput(session.state(),"replay_initial",-1,false,repeat);
+            for(size_t f=0;f<reference.size();f++){const double previousTime=t.time;session.step();if(phase9)auditOutput(session.state(),"replay",int(f),t.time>previousTime+Dt*.5,repeat);const auto&x=t.dofs->x.getValue();double sum=0;for(size_t n=0;n<x.size();n++){double d=length(x[n]-reference[f][n]);sum+=d*d;}maxRms=std::max(maxRms,std::sqrt(sum/x.size()));same&=json({t.tools[0].grasping,t.tools[1].grasping,session.nodeIds,t.components,t.cutCount})==events[f];}
             bool completed=session.mode=="replay_complete"&&session.stepIndex==reference.size();check("five_replays_exact_geometry_events",completed&&same&&maxRms<1e-10&&t.healthy&&t.safetyStops==0);
             report["replays"].push_back({{"repeat",repeat},{"max_frame_node_rms_m",maxRms},{"same_events",same},{"completed",completed}});std::cout<<"Phase5 replay "<<repeat<<" rms="<<maxRms<<" events="<<same<<std::endl;
         }
@@ -120,6 +143,11 @@ int testPhase5(Phase4Session&session,const std::filesystem::path&out,const json&
         for(auto key:{"asset_fingerprint","model_version","physics_model_version","young_modulus_pa","liver_alarm_guard_m","liver_alarm_minimum_m","liver_alarm_policy_version"}){auto bad=recording;if(std::string(key)=="young_modulus_pa")bad["config"][key]=26000;else if(std::string(key)=="liver_alarm_guard_m")bad["config"][key]=.0001;else if(std::string(key)=="liver_alarm_minimum_m")bad["config"][key]=.0007;else if(std::string(key)=="liver_alarm_policy_version")bad["config"][key]=0;else bad["config"][key]="mismatch";bool rejected=false;try{session.loadRecording(bad);}catch(const std::exception&){rejected=true;}check(std::string("reject_recording_")+key,rejected&&session.lastSteps==saved);}
         auto bad=recording;bad["steps"][0]["tools"][0]["tip_m"]={1e308,1e308,1e308};bool rejected=false;try{session.loadRecording(bad);}catch(const std::exception&){rejected=true;}check("reject_invalid_recording_atomically",rejected&&session.lastSteps==saved);
         auto cmd=session.effectiveCommand();cmd["specimen"]="flat";cmd["reset_id"]=999;int before=t.resetId;rejected=false;try{session.command(cmd);}catch(const std::exception&){rejected=true;}check("reject_specimen_switch_atomically",rejected&&t.resetId==before&&t.config.name=="gallbladder");
+    }
+    if(phase9){
+        outputAudit.flush();if(!outputAudit)throw std::runtime_error("Phase9 native output audit trace flush failed");outputAudit.close();
+        check("phase9_native_output_audits_pass_with_actual_contact_reference",outputAuditSamples>0&&outputAuditsPassed&&outputContactReferenceExercised);
+        report["phase9_output_audit"]={{"schema","endoforge.phase9-output-audit-summary.v1"},{"trace",outputAuditPath.generic_string()},{"samples",outputAuditSamples},{"failed_samples",outputAuditFailures},{"all_audits_passed",outputAuditsPassed},{"initial_invalid_sample_observed",outputInitialInvalidSample},{"initial_invalid_samples",outputInitialInvalidSamples},{"valid_no_contact_sample_observed",outputValidNoContactSample},{"valid_no_contact_samples",outputValidNoContactSamples},{"nonzero_contact_reference_exercised",outputContactReferenceExercised},{"nonzero_contact_reference_samples",outputNonzeroContactSamples},{"first_failure",firstOutputAuditFailure}};
     }
     bool pass=true;for(auto&[key,value]:report["checks"].items())pass&=value.get<bool>();
     std::sort(costs.begin(),costs.end());report["passed"]=pass;report["metrics"]={{"peak_node_depth_m",peakDepth},{"peak_displacement_m",peakDisp},{"peak_attachment_extension_m",peakBed},{"peak_fixed_error_m",peakFixed},{"min_tet_volume_ratio",minVol},{"min_triangle_area_ratio",minArea},{"min_lumen_volume_ratio",minLumen},{"max_lumen_volume_ratio",maxLumen},{"max_node_step_displacement_m",peakJump},{"samples",sample},{"duration_s",sample*Dt},{"completed_cycles",cycle-1},{"step_p95_ms",costs.empty()?0:costs[size_t(.95*(costs.size()-1))]}};

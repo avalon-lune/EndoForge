@@ -3,15 +3,18 @@
 // Immutable authored geometry. The fingerprint is for reproducibility, not a
 // cryptographic authenticity claim; delivery also hashes the source with SHA256.
 struct AnatomyAsset {
+    static constexpr const char* Phase9OutputSchema="endoforge.phase9-physics-output.v1";
     json source;
     std::string fingerprint;
     std::vector<V> vertices,normals,anchors,liverVertices;
     std::vector<std::array<int,3>> faces,liverFaces;
     std::set<int> fixedIds;
     std::vector<int> attachmentIds;
+    std::vector<double> attachmentWeights;
     std::array<V,2> home,targets;
     std::array<V,2> pivots{V(-.12,-.14,.15),V(.12,-.14,.15)};
     double thickness=.0011,attachmentStiffness=2.0,attachmentDamping=.02;
+    bool phase9Outputs()const{static const json tag={{"schema",Phase9OutputSchema}};return source.contains("phase9_physics_output")&&source.at("phase9_physics_output")==tag;}
     static std::shared_ptr<AnatomyAsset> load(const std::filesystem::path& path) {
         std::ifstream input(path,std::ios::binary);
         if(!input)throw std::runtime_error("Cannot open anatomy asset: "+path.string());
@@ -21,6 +24,8 @@ struct AnatomyAsset {
         std::ostringstream identity;identity<<"fnv1a64:"<<std::hex<<std::setw(16)<<std::setfill('0')<<hash;a->fingerprint=identity.str();
         const auto&j=a->source;
         if(j.value("schema","")!="endoforge.anatomy-mesh.v1")throw std::runtime_error("Unsupported anatomy asset schema");
+        if(j.contains("phase9_physics_output")&&!j.at("phase9_physics_output").empty()&&!a->phase9Outputs())throw std::runtime_error("Unsupported Phase9 physics output schema");
+        if(j.contains("phase9_linear_solver"))throw std::runtime_error("Experimental linear solver assets are not accepted by this runtime");
         if(j.value("units","")!="m"||!j.contains("model_id")||!j["model_id"].is_string()||j["model_id"].get<std::string>().empty()||!j.contains("version")||!j["version"].is_number_integer()||j["version"].get<int>()<1)throw std::runtime_error("Anatomy SI units/model identity invalid");
         auto points=[](const json& values){std::vector<V> out;for(const auto&v:values){if(!v.is_array()||v.size()!=3)throw std::runtime_error("Invalid anatomy position");V p(v[0].get<double>(),v[1].get<double>(),v[2].get<double>());if(!std::isfinite(length(p))||length(p)>2)throw std::runtime_error("Invalid anatomy SI coordinate");out.push_back(p);}return out;};
         a->vertices=points(j.at("vertices_m"));a->normals=points(j.at("normals"));
@@ -36,6 +41,17 @@ struct AnatomyAsset {
         a->fixedIds=j.at("fixed_vertex_ids").get<std::set<int>>();a->attachmentIds=j.at("attachment_vertex_ids").get<std::vector<int>>();
         a->anchors=points(j.at("attachment_anchor_positions_m"));
         if(a->attachmentIds.empty()||a->anchors.size()!=a->attachmentIds.size()||a->fixedIds.empty())throw std::runtime_error("Anatomy attachments missing");
+        a->attachmentWeights.assign(a->attachmentIds.size(),1.);
+        if(j.contains("attachment_vertex_weights")){
+            if(!a->phase9Outputs())throw std::runtime_error("Attachment vertex weights require the Phase9 physics output tag");
+            const auto&weights=j.at("attachment_vertex_weights");
+            if(!weights.is_array()||weights.size()!=a->attachmentIds.size())throw std::runtime_error("Attachment vertex weights must match attachment vertex IDs");
+            for(size_t i=0;i<weights.size();i++){
+                if(!weights[i].is_number())throw std::runtime_error("Attachment vertex weight must be numeric");
+                const double weight=weights[i].get<double>();if(!std::isfinite(weight)||weight<=0)throw std::runtime_error("Attachment vertex weight must be positive and finite");
+                a->attachmentWeights[i]=weight;
+            }
+        }
         for(int n:a->fixedIds)if(n<0||n>=int(a->vertices.size()))throw std::runtime_error("Invalid fixed material vertex");
         for(int n:a->attachmentIds)if(n<0||n>=int(a->vertices.size()))throw std::runtime_error("Invalid attachment material vertex");
         auto h=points(j.at("home_tips_m")),g=points(j.at("grasp_targets_m"));if(h.size()!=2||g.size()!=2)throw std::runtime_error("Two anatomy poses required");

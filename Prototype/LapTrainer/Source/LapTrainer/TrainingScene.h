@@ -3,6 +3,7 @@
 #include "GameFramework/Actor.h"
 #include "TrainingGeometry.h"
 #include "Phase6Interaction.h"
+#include "Phase7ProgressionClock.h"
 #include "RenderCommandFence.h"
 #include "TrainingScene.generated.h"
 class UCameraComponent;
@@ -35,6 +36,11 @@ public:
     bool IsPhase4() const;
     bool IsPhase5() const { return bPhase5; }
     bool IsPhase6() const { return bPhase6; }
+    bool IsPhase7() const { return bPhase7; }
+    bool IsPhase8() const { return bPhase8; }
+    bool IsPhase9() const { return bPhase9; }
+    int32 GetMilestone() const { return bPhase9?9:bPhase8?8:bPhase7?7:bPhase6?6:5; }
+    FString CommonMaterialPath(const FString& Stem) const;
     bool IsPhase6Preparing() const { return bPhase6 && !bVisualPreview && !bPhase6StartupReady; }
     FString GetPhase6StartupNotice() const;
     FString GetSpecimenName() const;
@@ -115,6 +121,26 @@ private:
     FString AnatomyModelId, AnatomyModelVersion;
     bool bPhase5=false, bPhase5Test=false, bPhase5Finished=false, bPhase5HomeAdopted=false;
     bool bPhase6=false, bPhase6Test=false;
+    bool bPhase7=false, bPhase8=false, bPhase9=false;
+    TArray<TSharedPtr<FJsonValue>> Phase7MaterialRecords,Phase7ShaderRecords;
+    TSharedPtr<FJsonObject> Phase7AttachmentBinding;
+    bool ValidatePhase7Materials();
+    void ConfigurePhase7Rendering();
+    TSharedRef<FJsonObject> BuildPhase7VisualSettings() const;
+    bool bPhase7Video=false,bPhase7ShapeReview=false;
+    void UpdatePhase7ShadingNormals();
+    void UpdatePhase9DisplaySurface(bool Rebuild);
+    TArray<int32> Phase9NormalGroups;
+    int32 Phase9NormalGroupCount=0;
+    FVector Phase9RodEndpoints[8]{};
+    void CapturePhase7ShapeReview(const FString& Stage);
+    int32 Phase7VideoFrames=0;
+    double Phase7VideoStarted=0,Phase7VideoLastFrame=-1;
+    FString Phase7VideoDirectory,Phase7VideoError;
+    TWeakObjectPtr<class UGameViewportClient> Phase7VideoViewport;
+    FDelegateHandle Phase7VideoDrawHandle;
+    void OnPhase7VideoFrame();
+    void StopPhase7Video(const FString& Reason);
     FPhase6InteractionState Phase6Interaction;
     void ResetPhase6Motion();
     void BeginPhase6PositionTarget(int32 Index,const TArray<FVector>& Waypoints = {});
@@ -153,6 +179,10 @@ private:
     bool bPhase6PerfBaselineValid=false;
     uint64 Phase6PerfSimulation=MAX_uint64,Phase6SolverSimulation=MAX_uint64,Phase6SolverStep=MAX_uint64;
     FString Phase6PerfMode;
+    EndoForgePhase7::FProgressionClock Phase7ProgressionClock;
+    void UpdatePhase7Progression();
+    void ClosePhase7Progression(const FString& Reason);
+    TSharedRef<FJsonObject> BuildPhase7ProgressionRecord() const;
     TSet<FName> Phase6DeferredTestPresses;
     TArray<TSharedPtr<FJsonValue>> Phase6ReadyTargetSamples;
     TSharedPtr<FJsonObject> Phase6ReadyRecipes[2];

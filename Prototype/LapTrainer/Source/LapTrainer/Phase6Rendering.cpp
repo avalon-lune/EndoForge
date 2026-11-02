@@ -33,7 +33,7 @@ void P6CVar(const TCHAR* Name,float Value)
 
 void ATrainingScene::InitializePhase6()
 {
-    bPhase6Test=FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test"));
+    bPhase6Test=FParse::Param(FCommandLine::Get(),TEXT("LapPhase6Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase7Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase8Test")) || FParse::Param(FCommandLine::Get(),TEXT("LapPhase9Test"));
     ResetPhase6Motion();ConfigurePhase6Rendering();UpdateCamera();WritePhase5Manifest();
     UE_LOG(LogTemp,Display,TEXT("LAP_PHASE6 Initialized high-detail anatomy, feedback-bounded control, DX12 lighting validation test=%d"),bPhase6Test);
 }
@@ -100,6 +100,7 @@ bool ATrainingScene::SavePhase6Json(const FString& Path,const TSharedRef<FJsonOb
 void ATrainingScene::CapturePhase6Review(const FString& Name,bool Closeup)
 {
     if(!bPhase6Test || !Phase6ProofCapture || !Phase6ProofTarget || !Bridge)return;
+    ClosePhase7Progression(TEXT("frozen_capture"));
     bPhase5CapturePrevious=true;bResumeSnapshot=true;Bridge->TickFrozenBridge();
     Phase6ProofCapture->PostProcessSettings=Camera->PostProcessSettings;
     Phase6ProofCapture->ShowFlags.SetDynamicShadows(true);

@@ -1,0 +1,449 @@
+{
+  "schema": "endoforge.phase9.phase8-reuse-inventory.v1",
+  "created_utc": "2026-11-02T08:56:59.292592+00:00",
+  "scope": "Read-only inventory of existing Phase8 package/check scripts. No package assembly, asset copying, UE/native launch or acceptance result is performed.",
+  "source_scripts": [
+    {
+      "path": "Scripts/Phase8/acceptance-spec.json",
+      "bytes": 8439,
+      "sha256": "ee0b295ca89cb7b9a8b1c183decb30dbbc236065defa77e884c4055a18a9f911",
+      "category": "contract",
+      "required_cli_inputs": [],
+      "from_imports": [],
+      "phase9_reuse_needs": "Adapt to Phase9 scope and new native qualification; retain existing numeric gates unless an explicit contract change is approved. Phase8 specifies exact prior-native inheritance and four internal alignment frames."
+    },
+    {
+      "path": "Scripts/Phase8/archive.py",
+      "bytes": 11521,
+      "sha256": "0387c577d02cad294ad59edbdb8fe6222b968161618165dd83cd21557db052bf",
+      "category": "archive_integrity",
+      "required_cli_inputs": [
+        "mode: seal/create/extract/verify",
+        "--package"
+      ],
+      "from_imports": [
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse canonical ZIP/member-name safety, exact membership, per-member SHA256, CRC, fresh extraction and no-overwrite logic. Update RECEIPT phase8-build-receipt.json, Phase8 build/schema/phase checks, and output/Phase8 confinement to Phase9. Package-manifest.json and EndoForge ZIP root can remain if the distribution contract keeps them."
+    },
+    {
+      "path": "Scripts/Phase8/assemble.py",
+      "bytes": 6897,
+      "sha256": "c0de8d7a585e6a8e4a3b76f5a9d38b6a3ccd3e701df73233922d2d877f29a50e",
+      "category": "package_assembly",
+      "required_cli_inputs": [
+        "--root",
+        "--ue-package",
+        "--output",
+        "--build-receipt"
+      ],
+      "from_imports": [
+        "build_receipt",
+        "common",
+        "pathlib",
+        "runtime_identity"
+      ],
+      "phase9_reuse_needs": "Create a fresh output/Phase9 child. Retain binary/source/runtime freeze checks and assembly manifest. Select Assets/Phase9 and Phase9 launch/readme/testing files; include editable new assets and current qualification/build evidence. Replace accepted native metadata and inherited receipt copies. Source-distribution roots are listed below; this inventory copies none."
+    },
+    {
+      "path": "Scripts/Phase8/audit_appearance.py",
+      "bytes": 14161,
+      "sha256": "7e1c05422a402fc99ddf9d30b9e83e3a54f967a31ef9af1567bf0882240079f8",
+      "category": "appearance_check",
+      "required_cli_inputs": [
+        "--manifest",
+        "--assets",
+        "--output"
+      ],
+      "from_imports": [
+        "audit_uv",
+        "common",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse actual material parameters/compiled shader/profile/manifest identity checks. Update fixed /Game/Phase8/Materials assets, Phase8 report/schema, phase-specific source/appearance expectations and any new geometry/material contracts."
+    },
+    {
+      "path": "Scripts/Phase8/audit_attachment.py",
+      "bytes": 12930,
+      "sha256": "4952399b399c6ab812c08dd1e6dc332a5f4837c99823f3d5a54fed9a0a267ad1",
+      "category": "geometry_kernel",
+      "required_cli_inputs": [],
+      "from_imports": [],
+      "phase9_reuse_needs": "Independent ruled attachment-ribbon/spring reconstruction can be reused if representation is unchanged; retain triangle/diagonal intersection and original clearance tolerances. Check the Phase9 rendered/native attachment fields before declaring compatibility."
+    },
+    {
+      "path": "Scripts/Phase8/audit_context.py",
+      "bytes": 16421,
+      "sha256": "a932839bcfde0ea43337fb39c34c4639e304971084e16626a29b904b1a805ab8",
+      "category": "geometry_check",
+      "required_cli_inputs": [
+        "--presented",
+        "--scene",
+        "--native-reference",
+        "--output"
+      ],
+      "from_imports": [
+        "audit_liver_contact",
+        "audit_phase4_collision_geometry",
+        "common",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse conservative face/OBB separation kernels and explicit tested-pair limits. Update scene.phase == 8, context IDs/scene assumptions and output schema to the actual Phase9 environment; record any changed geometry contract rather than retaining an invalid preflight."
+    },
+    {
+      "path": "Scripts/Phase8/audit_dataset.py",
+      "bytes": 20710,
+      "sha256": "0c607bb13e1ee36c816a43c84d0562e01bb3249eb827fd19f180d9c35c6af121",
+      "category": "data_check",
+      "required_cli_inputs": [
+        "--dataset",
+        "--output",
+        "--physics-mesh"
+      ],
+      "from_imports": [
+        "PIL",
+        "audit_appearance",
+        "audit_attachment",
+        "audit_uv",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse independent ray/depth/normal/static and dynamic geometry kernels. Update phase/schema and new scene/data contracts. Existing entry point requires scene.phase == 8 and exactly seven static objects, and its report binds four internal alignment frames."
+    },
+    {
+      "path": "Scripts/Phase8/audit_runtime.py",
+      "bytes": 26471,
+      "sha256": "9fbc2af7025ea0bd86b067d971b63e20108d2fc9dc3f86845a6fd5698fe50c38",
+      "category": "runtime_check",
+      "required_cli_inputs": [
+        "--capture",
+        "--output"
+      ],
+      "from_imports": [
+        "PIL",
+        "audit_appearance",
+        "common",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse quantitative latency/performance/render-ablation checks and finite raw-sample recomputation. Update Phase8 capture/report paths, phase/schema/appearance identities and new Phase9 fields; preserve existing performance/interaction thresholds unless explicitly revised."
+    },
+    {
+      "path": "Scripts/Phase8/audit_snapshot.py",
+      "bytes": 16472,
+      "sha256": "f79e804b81cd42e783f72baf221465aa1843ca76ce85d3a11d887308ee75dba4",
+      "category": "data_check",
+      "required_cli_inputs": [
+        "snapshots+"
+      ],
+      "from_imports": [
+        "__future__",
+        "audit_appearance",
+        "audit_attachment",
+        "audit_uv",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse PN geometry/projection, appearance/attachment/UV and screenshot checks. Entry point only permits --phase 8; update phase/schema/source bindings and ensure new Phase9 output/geometry semantics are checked, without silently loosening geometric tolerances."
+    },
+    {
+      "path": "Scripts/Phase8/audit_uv.py",
+      "bytes": 7049,
+      "sha256": "d464e40f82e9130500238e514f9a0b7a152a0b12df6130835c94b996972f3dc8",
+      "category": "geometry_kernel",
+      "required_cli_inputs": [],
+      "from_imports": [],
+      "phase9_reuse_needs": "Kernel can be reused if periodic_u_triangle_unwrap_pole_mean_v1 and native material bindings are unchanged. Existing chart schema remains historical endoforge.phase7.dynamic_uv_source.v1; do not mechanically relabel that schema. Retain normalized chart and 1e-5 UV error checks."
+    },
+    {
+      "path": "Scripts/Phase8/build_demo_video.py",
+      "bytes": 9246,
+      "sha256": "9a1366f3b38bb5443bef3a4805985ad7405ead7233ca35f028725f95391c52fd",
+      "category": "optional_media",
+      "required_cli_inputs": [
+        "Blender -- separator",
+        "--input",
+        "--output"
+      ],
+      "from_imports": [
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Actual UE viewport PNG encoding can be adapted after real captures exist. Update output/Phase8 confinement and Phase8 capture/schema checks. Blender encoder and original image/gap provenance checks remain; video is not a performance or qualification gate."
+    },
+    {
+      "path": "Scripts/Phase8/build_receipt.py",
+      "bytes": 14941,
+      "sha256": "d06daa785e7e6e3278c18e6bb89d124faa0393ea329910f2a8716f158f76d5bc",
+      "category": "build_chain",
+      "required_cli_inputs": [
+        "--root",
+        "--ue-package",
+        "--package-log",
+        "--output"
+      ],
+      "from_imports": [
+        "common",
+        "pathlib",
+        "runtime_identity"
+      ],
+      "phase9_reuse_needs": "Retain frozen source/assets/runtime/UAT identity checks. Extend source_hashes through Assets/Phase9 and docs/PHASE9.md/import helpers; replace verify_inheritance/distribution_inputs/frozen_inputs/accepted metadata logic with current Phase9 native execution and build provenance. Do not relabel accepted Phase7 native metadata."
+    },
+    {
+      "path": "Scripts/Phase8/collect_evidence.py",
+      "bytes": 23887,
+      "sha256": "0abd1971e7a91148f52aa1bcc6ef356ea81d3111e424054708b4bf400836793b",
+      "category": "candidate_binding",
+      "required_cli_inputs": [
+        "--root",
+        "--package",
+        "--capture",
+        "--audits",
+        "--visual-review",
+        "--import-receipt"
+      ],
+      "from_imports": [
+        "archive",
+        "build_receipt",
+        "common",
+        "datetime",
+        "pathlib",
+        "run_capture_audits",
+        "runtime_identity"
+      ],
+      "phase9_reuse_needs": "Retain exact assembly/source/runtime/current-capture/audit/visual/preservation/import evidence binding. Replace all Phase8 paths/schema and inherited Phase7 suite/metrics bundling with fresh Phase9 native qualification and current new-output checks. Existing candidate cannot pass with current35 execution because it explicitly requires inherited scope."
+    },
+    {
+      "path": "Scripts/Phase8/common.py",
+      "bytes": 1539,
+      "sha256": "32353ce50126e15062ae23e6736ba57957698eb97a02fdabde5388da2742ddac",
+      "category": "utility",
+      "required_cli_inputs": [],
+      "from_imports": [
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "General finite/pass/hash/new-file helpers can be reused unchanged; no Phase8-specific validation logic."
+    },
+    {
+      "path": "Scripts/Phase8/extract_presented_trace.py",
+      "bytes": 2300,
+      "sha256": "d883bb5d2b836d35b9fa9e8b8632b482368509ff7372104b322683ca067e69c2",
+      "category": "trace_adapter",
+      "required_cli_inputs": [
+        "--presented",
+        "--native-reference",
+        "--output"
+      ],
+      "from_imports": [
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse direct accepted-state extraction, reset boundaries, native fingerprint/config/topology checks and >=30 states; update its hardcoded record.phase == 8. Preserve explicit reference binding and original native coordinates."
+    },
+    {
+      "path": "Scripts/Phase8/final_delivery_receipt.py",
+      "bytes": 8068,
+      "sha256": "7e0f17074ca33e76a5d2a720ff4a7188f0480e16e651e1e2ea9dd78b8a29e030",
+      "category": "final_binding",
+      "required_cli_inputs": [
+        "--root",
+        "--archive",
+        "--archive-report",
+        "--extraction-report",
+        "--package",
+        "--extracted",
+        "--capture",
+        "--audits",
+        "--visual-review",
+        "--preservation",
+        "--output"
+      ],
+      "from_imports": [
+        "archive",
+        "collect_evidence",
+        "common",
+        "datetime",
+        "pathlib",
+        "runtime_identity"
+      ],
+      "phase9_reuse_needs": "Retain exact ZIP/candidate/fresh extraction/run/auditor/preservation identity chain and fresh-run timing checks. Replace Phase8 paths/schema, source model, baseline path, current35-false checks and inherited metrics with fresh Phase9 evidence. Never reuse an old final receipt as a current pass."
+    },
+    {
+      "path": "Scripts/Phase8/freeze_ue_validation.py",
+      "bytes": 15693,
+      "sha256": "a6dd25b4be3761f1467b9118895073f3202c2263a6669abdfdf2f76d504a81d3",
+      "category": "build_chain",
+      "required_cli_inputs": [
+        "mode: prepare/protocol/seal",
+        "--root",
+        "--output"
+      ],
+      "from_imports": [
+        "build_receipt",
+        "common",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Retain prepare/protocol/seal sequencing and same-editor-module bindings; replace Phase8 paths/schema/source freeze and inherited Phase7-native contract with fresh Phase9 qualification. AtomicSnapshotProtocol remains an existing shared test, not a Phase9 pass by itself."
+    },
+    {
+      "path": "Scripts/Phase8/inherit_native.py",
+      "bytes": 24463,
+      "sha256": "e5bb00951424c5f68e831f6054637e07c6da309a2738657c79dc680d7bb5ddfc",
+      "category": "predecessor_identity_only",
+      "required_cli_inputs": [
+        "--root",
+        "--report"
+      ],
+      "from_imports": [
+        "datetime",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Do not reuse as Phase9 qualification. It proves exact accepted Phase7 identity, requires no current native execution, and restricts its report to tmp/phase8/native-inheritance*.json. Phase9 needs fresh native results for the selected mesh/runtime."
+    },
+    {
+      "path": "Scripts/Phase8/preservation.py",
+      "bytes": 12111,
+      "sha256": "e2cc411a02947dc8e272da26fe01f94a3daf2d9dc1a099ee9830162404ca4a8e",
+      "category": "preservation",
+      "required_cli_inputs": [
+        "mode: create/verify",
+        "--root",
+        "--baseline"
+      ],
+      "from_imports": [
+        "datetime",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Already extended separately as Scripts/Phase9/preservation.py; do not modify the Phase8 helper or baseline."
+    },
+    {
+      "path": "Scripts/Phase8/record_visual_review.py",
+      "bytes": 4386,
+      "sha256": "bca5b9f2095f519f4ae3341c5e00682022bd0b52d55adcb9b9da46c0c61d3c46",
+      "category": "review_integrity",
+      "required_cli_inputs": [
+        "--capture",
+        "--scene",
+        "--baseline-capture",
+        "--review",
+        "--output"
+      ],
+      "from_imports": [
+        "audit_appearance",
+        "common",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse identity-bound findings and four distinct actual review views. Update phase/schema, comparison finding currently phase7_comparison and baseline view text/requirements to the chosen Phase8 predecessor. Engineering review still cannot supply clinical approval."
+    },
+    {
+      "path": "Scripts/Phase8/run_capture_audits.py",
+      "bytes": 26081,
+      "sha256": "c996cbd6617131284a4fd00a9c23c8c9514330f730953dcd22fbf28d7acf3cca",
+      "category": "capture_orchestrator",
+      "required_cli_inputs": [
+        "--source-root",
+        "--capture",
+        "--assets",
+        "--native-reference",
+        "--native-inheritance",
+        "--native-executable",
+        "--accepted-native-suite",
+        "--spec",
+        "--output"
+      ],
+      "from_imports": [
+        "concurrent.futures",
+        "datetime",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Reuse source/input identity freezes and auditor binding. Update DEPENDENCIES, phase/schema/source paths, required runtime capture, frame contract and native qualification input. Existing preflight explicitly requires inherited Phase7 execution and disallows a new native 35-case execution; it cannot be used unchanged for Phase9."
+    },
+    {
+      "path": "Scripts/Phase8/runtime_identity.py",
+      "bytes": 4588,
+      "sha256": "5a27b0c0d8d56130ebf6ced764fcce8842186aaad2668aad6b20295cc1fc30e7",
+      "category": "package_identity",
+      "required_cli_inputs": [],
+      "from_imports": [
+        "common",
+        "pathlib"
+      ],
+      "phase9_reuse_needs": "Retain canonical relative child paths and exact UE/native artifact inventories. Update LAUNCH_SOURCES, schemas, phase, Assets/Phase9, bound native qualification, native mesh alias/source mapping, and packaged evidence. Existing verify() hard-requires Phase8 build plus Phase7 inheritance."
+    }
+  ],
+  "shared_external_auditor_dependencies": [
+    "Scripts/Phase7/audit_trace_resumable.py",
+    "Scripts/Phase7/audit_identity.py",
+    "Scripts/Phase7/acceptance-spec.json",
+    "Scripts/Phase5/audit_geometry.py",
+    "Scripts/Phase5/audit_contact.py",
+    "Scripts/Phase5/audit_liver_contact.py",
+    "Scripts/Phase5/audit_trace_parallel.py",
+    "Scripts/audit_phase4_collision_geometry.py"
+  ],
+  "launch_and_import_inputs": [
+    {
+      "path": "Scripts/StartPhase8.ps1",
+      "exists": true,
+      "sha256": "e5fb28af096460506cdc726d891436dbda0b608385767e93b76ea4ed155c94cf"
+    },
+    {
+      "path": "Scripts/StartPhase8Development.ps1",
+      "exists": true,
+      "sha256": "e7b1f027f973e128d637d887d50cc9a0fb8784a39f46fbaf846060728bd1888c"
+    },
+    {
+      "path": "Scripts/Phase7ProcessPolicy.ps1",
+      "exists": true,
+      "sha256": "7d90b202e5031c5f8e6cf4fed8160373ee4513f893027b5c318afd46818ccc28"
+    },
+    {
+      "path": "Scripts/StartTrainer.cmd",
+      "exists": true,
+      "sha256": "b8dcd269701024beec0adfbf18afd64ac5a3771f55db1c1335c8f5926935944d"
+    },
+    {
+      "path": "Scripts/README-Phase8-Delivery.md",
+      "exists": true,
+      "sha256": "a8c67f30d78bc6dd2a557d49d7b11d3cce8f4c6ca16ba34204c1c1150bb300cf"
+    },
+    {
+      "path": "Scripts/TESTING-Phase8.zh-CN.md",
+      "exists": true,
+      "sha256": "424e1674852613c0c819c479f9a63ecf64a0a7c184ccae536e58bb1879c40231"
+    },
+    {
+      "path": "tmp/phase8/import_phase8.py",
+      "exists": true,
+      "sha256": "c1c5b3bf86011fa75f31da92940e1083f9ddd59604106dbf95736f1b2019c1a7"
+    },
+    {
+      "path": "tmp/phase8/run_import.ps1",
+      "exists": true,
+      "sha256": "399dd8a6dd56c06da2d1724ee242bae2c68a67f80c8d4df054f3c78866d2d20d"
+    }
+  ],
+  "assembly_source_distribution_roots": [
+    "Physics top-level .cpp/.h/.ps1/.py/.json/.txt/.md",
+    "Physics/configs",
+    "Prototype/LapTrainer/LapTrainer.uproject",
+    "Prototype/LapTrainer/Source",
+    "Prototype/LapTrainer/Config",
+    "Prototype/LapTrainer/Content",
+    "Prototype/LapTrainer/Scripts",
+    "Scripts",
+    "Assets/Phase5",
+    "Assets/Phase6",
+    "Assets/Phase7",
+    "Assets/Phase8",
+    "docs",
+    "README.md and present LICENSE/.gitattributes/.gitignore",
+    "present tmp/phase8 import helpers",
+    "SOFA corresponding source ZIP"
+  ],
+  "native_runtime_copy_policy": "Top-level .exe/.dll/build-info.json/runtime-manifest.txt/license/notice/copying/third-party files plus licenses/etc/share/configs/assets. Existing Phase8 assembly then replaces packaged build-info with accepted Phase7 post-suite metadata and packaged assets/phase6.json with Phase8 mesh; those inheritance-specific replacements must be redesigned for current Phase9 provenance.",
+  "non_reusable_acceptance_claims": [
+    "Phase7 native suite passed",
+    "Phase8 inherited exact native identity",
+    "Phase8 current35 execution false",
+    "Phase8 package/capture/final passed receipts"
+  ],
+  "native_wrapper": "Scripts/Phase9/run_native_qualification.py",
+  "native_wrapper_status": "Implemented; static compilation/reversible adaptation/canonical 35-case order/unchanged spec/plan-only output guard checks passed. Full native suite not run.",
+  "native_pose_contract": "Wrapper retains frozen Phase6 long-hold nominal ready tips and rejects a selected mesh that differs; +/-0.1 mm offsets, hold durations and traction thresholds are unchanged."
+}

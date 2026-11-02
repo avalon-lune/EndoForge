@@ -165,7 +165,8 @@ void ATrainingScene::RecordPresentedState()
     if(LastPhysicsFrame!=Bridge->GetFrameNumber() || BoundTopologyRevision!=Bridge->GetTopologyRevision()) return;
     PresentedStateId=Bridge->GetStateId();
     TSharedRef<FJsonObject> O=MakeShared<FJsonObject>();
-    O->SetNumberField(TEXT("schema"),1); O->SetNumberField(TEXT("phase"),bPhase6?6:bPhase5?5:4);
+    O->SetNumberField(TEXT("schema"),1); O->SetNumberField(TEXT("phase"),bPhase5?GetMilestone():4);
+    if(bPhase7){O->SetNumberField(TEXT("mechanics_phase"),6);O->SetStringField(TEXT("visual_manifest_sha1"),AnatomyVisualFingerprint);}
     O->SetStringField(TEXT("record_kind"),TEXT("presented_state"));
     O->SetObjectField(TEXT("native_state"),Bridge->GetAcceptedState());
     O->SetObjectField(TEXT("camera"),BuildCameraRecord());
@@ -185,6 +186,7 @@ void ATrainingScene::FlushPresentedStates()
 void ATrainingScene::BeginSnapshot()
 {
     if(!IsPhase4() || !Bridge->IsConnected() || !Bridge->GetAcceptedState().IsValid()) return;
+    ClosePhase7Progression(TEXT("frozen_capture"));
     bSnapshotFrozen=true; SnapshotFreezeTicks=0; SnapshotStartedSeconds=FPlatformTime::Seconds();
     if(bPhase5) bPhase5CapturePrevious=true;
     SnapshotStem=FPaths::Combine(Phase4Directory,FString::Printf(TEXT("%s-snapshot-%03llu"),bPhase5?TEXT("phase5"):TEXT("phase4"),static_cast<unsigned long long>(++SnapshotCaptureId)));
@@ -199,8 +201,9 @@ void ATrainingScene::RestoreSnapshotHUD()
 void ATrainingScene::SaveFrozenSnapshot()
 {
     SnapshotObject=MakeShared<FJsonObject>();
-    SnapshotObject->SetNumberField(TEXT("schema"),1); SnapshotObject->SetNumberField(TEXT("phase"),bPhase6?6:bPhase5?5:4);
-    SnapshotObject->SetStringField(TEXT("binding_method"),bPhase6?TEXT("bounded_pn_triangle"):TEXT("linear_barycentric"));
+    SnapshotObject->SetNumberField(TEXT("schema"),1); SnapshotObject->SetNumberField(TEXT("phase"),bPhase5?GetMilestone():4);
+    if(bPhase7){SnapshotObject->SetNumberField(TEXT("mechanics_phase"),6);SnapshotObject->SetObjectField(TEXT("appearance"),BuildPhase7VisualSettings());}
+    SnapshotObject->SetStringField(TEXT("binding_method"),bPhase9?TEXT("smooth_bounded_pn_triangle_v1"):bPhase6?TEXT("bounded_pn_triangle"):TEXT("linear_barycentric"));
     SnapshotObject->SetNumberField(TEXT("max_offset_mm"),bPhase6?.12:0);
     SnapshotObject->SetNumberField(TEXT("capture_id"),SnapshotCaptureId);
     SnapshotObject->SetStringField(TEXT("screenshot"),FPaths::GetCleanFilename(SnapshotStem+TEXT(".png")));
@@ -218,7 +221,7 @@ void ATrainingScene::SaveFrozenSnapshot()
     const double Focal=CameraRecord->GetNumberField(TEXT("fx_px")),CX=CameraRecord->GetNumberField(TEXT("cx_px")),CY=CameraRecord->GetNumberField(TEXT("cy_px"));
     double PixelError=0,BindingError=0;
     FTrainingRenderMesh ReconstructedMesh;
-    if(bPhase6){ReconstructedMesh=TissueRenderData;TrainingGeometry::UpdateBoundSurface(TissueVertices,TissueNormals,TissueRenderBindings,ReconstructedMesh,.012);}
+    if(bPhase6){ReconstructedMesh=TissueRenderData;TrainingGeometry::UpdateBoundSurface(TissueVertices,TissueNormals,TissueRenderBindings,ReconstructedMesh,.012,bPhase9);}
     for(int32 I=0;I<Mesh->ProcVertexBuffer.Num();++I)
     {
         const FVector Actual=TissueMesh->GetComponentTransform().TransformPosition(FVector(Mesh->ProcVertexBuffer[I].Position));

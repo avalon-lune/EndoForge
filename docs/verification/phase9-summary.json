@@ -1,0 +1,192 @@
+{
+  "schema": "endoforge.phase9.public-review-summary.v1",
+  "phase": 9,
+  "created_utc": "2026-11-02T12:56:21.031890+00:00",
+  "scope": "Compact public record derived from the immutable local Phase9 review summary. Recorded engineering checks apply to the identified candidate, archive and actual local captures. This publication does not establish a new build, another test run, human visual approval, final delivery acceptance or clinical validity.",
+  "passed": true,
+  "engineering_ready_for_human_review": true,
+  "human_visual_approval": "pending",
+  "delivery_accepted": false,
+  "clinical_approval": "not_claimed",
+  "known_visual_review_note": "Residual grey curvature bands remain for human review; aesthetic acceptance belongs to the human reviewer.",
+  "checks": {
+    "actual_candidate_and_zip_identity": true,
+    "archive_create_extract_verify_passed": true,
+    "fresh_zip_extraction_runtime_and_all_eight_audits_passed": true,
+    "original_package_measurements_bound_separately": true,
+    "fresh_native35_passed": true,
+    "all15_raw_hold_states_passed": true,
+    "native26_geometry_and_full_endurance2_passed": true,
+    "successful_frozen_build_and_complete_redistribution_identity": true,
+    "earlier_phase_preservation_passed": true,
+    "all19_negative_asset_contract_cases_passed": true,
+    "all_bound_reports_and_input_hashes_match": true
+  },
+  "inputs": {
+    "physics_exe_sha256": "2ab82f5b9d74419ae4507f698d4dcb5b071e43d3cbae5ef188d41be8a3a2f3a0",
+    "physics_mesh_sha256": "bb78f5c1950d14c6656d476d199f6f5f03743ebe886c47d1030ca570ee8085ec",
+    "game_exe_sha256": "3ef3a4790a37872b8f6413416102f12a694447e61349d06023f74bb41cd8c6b1"
+  },
+  "local_source_summary": {
+    "path": "output/Phase9/phase9-review-verification-final01.json",
+    "sha256": "0a9f652d577148c63006bf1ef4ec9f25567afdf0d2cf25f783d0df036b3f83ae",
+    "bytes": 15626
+  },
+  "local_build_receipt": {
+    "path": "tmp/phase9/build-receipt-final01.json",
+    "sha256": "d086a234a9327e204d0d4d7912c90a0402ecbc76373fd2ee6da92cf001f54d66",
+    "bytes": 7988200
+  },
+  "public_source_inventory": {
+    "path": "docs/verification/phase9-source-assets.json",
+    "sha256": "bbe8260ae04ea2e2cb6adb8d5fcd002dc82e4f62144b54de547f5ee1d456951e",
+    "bytes": 63639
+  },
+  "historical_review_tools_manifest": {
+    "path": "docs/verification/phase9-tools/manifest.json",
+    "sha256": "101a08ad32a1132d8e8ec75777a86966ad9e3cf14cc3722860cb76acd726e827",
+    "bytes": 6586
+  },
+  "candidate": "output/Phase9/EndoForge-Phase9-review-final01",
+  "archive": {
+    "path": "output/Phase9/EndoForge-Phase9-review-final01.zip",
+    "sha256": "7607c4d0a645654286093d56d6452cbf39922f79276fea12254bb0fec198cfa7",
+    "bytes": 657979520
+  },
+  "fresh_extraction": "output/Phase9/_validation/FreshExtract01",
+  "manifest_sha256": "dca3dfb0edd2804ef482ebbdec5d1da30a5692a6bee1406670cd77e66868fb33",
+  "coverage": {
+    "native_cases": 35,
+    "raw_hold_cases": 15,
+    "raw_hold_states": 62958,
+    "native_geometry_audits": 26,
+    "endurance_audits": 2,
+    "negative_asset_cases": 19,
+    "endurance_states": 21865,
+    "fresh_presented_states": 1547,
+    "fresh_nonreset_edges": 1542,
+    "fresh_interpolated_samples": 4626
+  },
+  "measurement_scope": "Separate actual local packaged and fresh-extracted captures. Input response is a local application measure, not motion-to-photon latency. FPS, frame P95 and simulation/live-wall ratios are scoped to these runs and this machine. Four stereo frames are internal correspondence checks, not a research dataset.",
+  "measurements": {
+    "actual_packaged_capture": {
+      "mean_fps": 56.24531351506108,
+      "frame_p95_ms": 21.045751571655273,
+      "simulation_to_wall_ratio": 0.9591922491290252,
+      "measured_wall_seconds": 24.916798505932093,
+      "measured_native_seconds": 23.89999999999974,
+      "input_response_p95_ms": 103.33672724664211,
+      "capture": "tmp/phase9/package-tests/Phase9Package-final01",
+      "package": "output/Phase9/_validation/Integration01",
+      "runtime_audit": {
+        "path": "tmp/phase9/audits-package-final01/runtime.json",
+        "sha256": "a75b1267cda6598e394495aadde13cfb6ad0caa4ad6b8d432b9fd85b047bb297",
+        "bytes": 10825
+      },
+      "package_run_receipt": {
+        "path": "tmp/phase9/package-tests/Phase9Package-final01/package-run.json",
+        "sha256": "c5388e43c44e4416aa8198aa6c43a0f83869c644b4d0c3b04beda15d2c573836",
+        "bytes": 4432
+      }
+    },
+    "fresh_zip_extraction_capture": {
+      "mean_fps": 56.087717817165164,
+      "frame_p95_ms": 21.15848436355591,
+      "simulation_to_wall_ratio": 0.9547476875805126,
+      "measured_wall_seconds": 24.928051996976137,
+      "measured_native_seconds": 23.79999999999975,
+      "input_response_p95_ms": 111.76409851759672,
+      "capture": "tmp/phase9/package-tests/Phase9FreshExtract-final01",
+      "package": "output/Phase9/_validation/FreshExtract01",
+      "runtime_audit": {
+        "path": "tmp/phase9/audits-fresh-extract-final01/runtime.json",
+        "sha256": "b79c6a37567489d06e65878ca51d536e414285624f49d6eb629eab5eaaa76dec",
+        "bytes": 10827
+      },
+      "package_run_receipt": {
+        "path": "tmp/phase9/package-tests/Phase9FreshExtract-final01/package-run.json",
+        "sha256": "eaef4947a5be388889b1743af895ea6551127bdd0c39e77f89bedfc06e318a46",
+        "bytes": 4460
+      }
+    }
+  },
+  "local_evidence_identities": {
+    "archive_create": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01-archive-create.json",
+      "sha256": "0f2a8924a070b825149ab61756bd28170f17a884676c656c58cfff3751e5e372",
+      "bytes": 1851
+    },
+    "archive_extract": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01-extraction.json",
+      "sha256": "55361a8cddacb6ba57c6f9c1abd34d987fe3c2a4624fc84a57228cba6e756a5c",
+      "bytes": 2083
+    },
+    "archive_verify": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01-extracted-verify.json",
+      "sha256": "4a78c12a65fb8da1d237ce14c75d95b32c4071e255fbcb11fd61d285c7c05798",
+      "bytes": 2381
+    },
+    "complete_index": {
+      "path": "tmp/phase9/audits-fresh-extract-final01/complete-audit-index.json",
+      "sha256": "a3d19405a49ebd53e0bb56dabd52113e391a438c83993ac7d45017d892327b37",
+      "bytes": 23477
+    },
+    "native_qualification": {
+      "path": "tmp/phase9/native-qualification-final02/qualification.json",
+      "sha256": "58e24cffdedda98695dca5127f5918482ad464231858479af3cef9ca73a28440",
+      "bytes": 14187
+    },
+    "raw_holds": {
+      "path": "tmp/phase9/native-qualification-final02/long-hold-raw-state-audit.json",
+      "sha256": "45b11e4c772dfd0534e8b292c90795b734f1718e1f79204449c21946037bebb8",
+      "bytes": 87777
+    },
+    "native_geometry": {
+      "path": "tmp/phase9/native-geometry-final02/final-coverage-index.json",
+      "sha256": "46ceeaa8765fa4186e747edb7f5e61d9519250ee0529f992a22d555123e49d9e",
+      "bytes": 86046
+    },
+    "endurance_index": {
+      "path": "tmp/phase9/endurance-geometry-final02/audit-run.json",
+      "sha256": "d45485f522d285cd31cd6a75497d42f6abc110b9b317f41b57a939c2254acac2",
+      "bytes": 25525
+    },
+    "preservation": {
+      "path": "tmp/phase9/delivery-preflight01/preservation-check.json",
+      "sha256": "0108ffd3a0a9aa7c5a409205ee6a9297a3873ab2c9c44093136fd3fe03633da1",
+      "bytes": 2578
+    },
+    "asset_contract": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01/Evidence/asset_contract.json",
+      "sha256": "8fec135ac522ae49a773a2bf0269dd12dfeee74b9ed9915e6f9e5b3691189ac8",
+      "bytes": 41155
+    },
+    "candidate_receipt": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01/review-candidate.json",
+      "sha256": "965d134e53f8073b051b45efa7b068e538a70b30936db1ee1014a95f74440ff6",
+      "bytes": 208799
+    },
+    "candidate_validation": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01/Evidence/validation-receipt.json",
+      "sha256": "6782b3e5a92b86a2d7ac7e40a20e45a2bafd6d68e3d9681c31541493e373f87f",
+      "bytes": 20915
+    },
+    "original_complete_index": {
+      "path": "output/Phase9/EndoForge-Phase9-review-final01/Evidence/packaged_audits.json",
+      "sha256": "92e5667544c0c96b609369704272227b1e41c3c51dd0f7098cf3e7b702c9f141",
+      "bytes": 25333
+    }
+  },
+  "summary_sealing_helper": {
+    "path": "tmp/phase9/seal_delivery_review_summary.py",
+    "sha256": "83e0df51c96956cab386e634e5e895b98214691f3ae1adc0a9d8281426c36c84",
+    "bytes": 19739,
+    "preserved_copy": "docs/verification/phase9-tools/seal_delivery_review_summary.py"
+  },
+  "publication": {
+    "local_path_base": "repository root",
+    "raw_evidence_hosted": false,
+    "local_archive_uploaded": false,
+    "scope": "Project source/assets, selected unchanged synthetic UE screenshots, compact evidence identities and exact historical helper copies. Paths under tmp/ and output/ identify local evidence; those raw reports, traces, runtimes and delivery archives are not hosted by this source synchronization."
+  }
+}

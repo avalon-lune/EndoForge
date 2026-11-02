@@ -1,0 +1,129 @@
+{
+  "schema": "endoforge.phase9.historical-review-tools.v1",
+  "phase": 9,
+  "source_review_summary": {
+    "path": "output/Phase9/phase9-review-verification-final01.json",
+    "sha256": "0a9f652d577148c63006bf1ef4ec9f25567afdf0d2cf25f783d0df036b3f83ae",
+    "bytes": 15626
+  },
+  "scope": "Exact historical helper and final orchestration bytes preserved for inspection of the local Phase9 engineering review. These documentation copies are outside the frozen build input inventory.",
+  "historical_path_base": "workspace root",
+  "published_path_base": "repository root",
+  "restore_policy": "Recipes require their original workspace-relative locations, matching local evidence, local tool installations and the original directory depth. Preserve these copies when adapting a separate new run.",
+  "raw_evidence_hosted": false,
+  "file_count": 16,
+  "files": [
+    {
+      "original_path": "tmp/phase9/delivery-preflight01/archive_phase9.py",
+      "published_path": "docs/verification/phase9-tools/delivery-preflight01/archive_phase9.py",
+      "bytes": 12363,
+      "sha256": "c70e32829d627f2c281ef8971e452f004b9ca7e9b2f3d643639a3bb8543def24",
+      "purpose": "Archive creation, extraction and manifest verification."
+    },
+    {
+      "original_path": "tmp/phase9/delivery-preflight01/run_package_audits.py",
+      "published_path": "docs/verification/phase9-tools/delivery-preflight01/run_package_audits.py",
+      "bytes": 25621,
+      "sha256": "60f2144a03ee6cc9f2da1601ce117df1f79df2ec8aabd469587a6059ddaf1f7b",
+      "purpose": "Independent audits of a completed package capture."
+    },
+    {
+      "original_path": "tmp/phase9/run_presented_geometry_audits.py",
+      "published_path": "docs/verification/phase9-tools/run_presented_geometry_audits.py",
+      "bytes": 11095,
+      "sha256": "391e9357af3a7216f24c418013ebbc74cebb3049bd7325782cc6a182edfff819",
+      "purpose": "Full presented-trajectory contact and liver audit orchestration."
+    },
+    {
+      "original_path": "tmp/phase9/seal_complete_package_audits.py",
+      "published_path": "docs/verification/phase9-tools/seal_complete_package_audits.py",
+      "bytes": 24991,
+      "sha256": "0371b3f44a8ee92375dbbc1bd7b597a6084edc3f6f96831c70ee5eea9d987338",
+      "purpose": "Fresh-extracted eight-audit evidence index."
+    },
+    {
+      "original_path": "tmp/phase9/seal_complete_package_audits_final01.py",
+      "published_path": "docs/verification/phase9-tools/seal_complete_package_audits_final01.py",
+      "bytes": 14257,
+      "sha256": "c9f6312da010272c797bc8a842e164cbaa13cbe5d70bced179236cabcb22dd69",
+      "purpose": "Original package eight-audit evidence index."
+    },
+    {
+      "original_path": "tmp/phase9/seal_delivery_review_summary.py",
+      "published_path": "docs/verification/phase9-tools/seal_delivery_review_summary.py",
+      "bytes": 19739,
+      "sha256": "83e0df51c96956cab386e634e5e895b98214691f3ae1adc0a9d8281426c36c84",
+      "purpose": "Hash-bound engineering review summary sealing."
+    },
+    {
+      "original_path": "tmp/phase9/prepare_validation_receipt01.py",
+      "published_path": "docs/verification/phase9-tools/prepare_validation_receipt01.py",
+      "bytes": 6884,
+      "sha256": "8b7e2711af34ebef636dcb6d402d762fd01ae140ef476f1d38c61a786ea2e274",
+      "purpose": "Assembly validation receipt preparation."
+    },
+    {
+      "original_path": "tmp/phase9/create_packaged_gallery02.py",
+      "published_path": "docs/verification/phase9-tools/create_packaged_gallery02.py",
+      "bytes": 2371,
+      "sha256": "8dbcd34740b35b30712457447508f630a7be15506f473e6983a8d80841bd06c9",
+      "purpose": "Actual packaged capture gallery recipe."
+    },
+    {
+      "original_path": "tmp/phase9/audit_all_hold_states_final02.py",
+      "published_path": "docs/verification/phase9-tools/audit_all_hold_states_final02.py",
+      "bytes": 3963,
+      "sha256": "907536fb4e23527ecfd55968e884777cabba074b9dd97ede4d5c95c5b4b2804c",
+      "purpose": "Validation of every recorded sustained-grip state."
+    },
+    {
+      "original_path": "tmp/phase9/seal_completed_nominal_holds_final02.py",
+      "published_path": "docs/verification/phase9-tools/seal_completed_nominal_holds_final02.py",
+      "bytes": 8964,
+      "sha256": "4d9a14a429da51f9f05638d2e2389c5fadc44d9b6801e6d9af44d751b1df0d48",
+      "purpose": "Hash-bound nominal sustained-grip case sealing."
+    },
+    {
+      "original_path": "tmp/phase9/native-geometry-final02/run_batch_final_eight_workers.py",
+      "published_path": "docs/verification/phase9-tools/native-geometry-final02/run_batch_final_eight_workers.py",
+      "bytes": 26365,
+      "sha256": "b572e743a8d6463893ee33a2a85bb476ceae99f463cebf51b0d9e2802c15ec49",
+      "purpose": "Final native geometry coverage coordinator."
+    },
+    {
+      "original_path": "tmp/phase9/endurance-geometry-final02/run_owned_job.py",
+      "published_path": "docs/verification/phase9-tools/endurance-geometry-final02/run_owned_job.py",
+      "bytes": 3733,
+      "sha256": "5c1bece50f8385762a1fb81ede625b4912cbd4cb336b321d9d9134b128787ae0",
+      "purpose": "Recorded endurance geometry auditor process invocation."
+    },
+    {
+      "original_path": "tmp/phase9/endurance-geometry-final02/write_endurance_index.py",
+      "published_path": "docs/verification/phase9-tools/endurance-geometry-final02/write_endurance_index.py",
+      "bytes": 7457,
+      "sha256": "69a1b6f6b78bbfee1172ad186a87e3d0b885402b4c9d84f29c90e2136c3fa6ed",
+      "purpose": "Endurance geometry completion index."
+    },
+    {
+      "original_path": "tmp/phase9/finalize_build01.ps1",
+      "published_path": "docs/verification/phase9-tools/finalize_build01.ps1",
+      "bytes": 1978,
+      "sha256": "2f0e78dd8712f66d1ca1a5ed03972bfedfe1337607a7f8ce3a41128fb1eeda9e",
+      "purpose": "Final native staging and frozen build receipt orchestration."
+    },
+    {
+      "original_path": "tmp/phase9/finalize_candidate_and_archive01.ps1",
+      "published_path": "docs/verification/phase9-tools/finalize_candidate_and_archive01.ps1",
+      "bytes": 3406,
+      "sha256": "306bb90269f0716172def92714ebc058c06bd7525e5daac96384b33c81418dda",
+      "purpose": "Candidate assembly, ZIP creation and extraction orchestration."
+    },
+    {
+      "original_path": "tmp/phase9/finalize_fresh_runtime01.ps1",
+      "published_path": "docs/verification/phase9-tools/finalize_fresh_runtime01.ps1",
+      "bytes": 5353,
+      "sha256": "bf4ed6bb5612d907034378f34975c712b2086d7feffae44759d0d1ef1e36f244",
+      "purpose": "Fresh-extracted runtime, audit and review-summary orchestration."
+    }
+  ]
+}
